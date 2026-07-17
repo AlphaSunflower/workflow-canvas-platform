@@ -1,0 +1,21 @@
+{
+  "name": "@newworkflow/backend-shared",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./api": "./src/public/api.ts",
+    "./auth": "./src/public/auth.ts",
+    "./execution": "./src/public/execution.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit -p ./tsconfig.json"
+  },
+  "dependencies": {
+    "typescript": "^5.8.3"
+  },
+  "devDependencies": {
+    "@types/node": "^24.6.1"
+  }
+}

@@ -1,0 +1,31 @@
+{
+  "name": "@newworkflow/backend",
+  "private": true,
+  "version": "0.1.0",
+  "scripts": {
+    "start": "node ./scripts/start-backend.mjs --start",
+    "dev": "node ./scripts/start-backend.mjs --dev",
+    "check-config": "node ./scripts/start-backend.mjs --check",
+    "init-db": "node ./scripts/init-db.mjs",
+    "init-db:test": "node ./scripts/init-db.mjs --test",
+    "arch:report": "node ./scripts/check-arch.mjs",
+    "arch:check": "node ./scripts/check-arch.mjs --enforce",
+    "lint": "node ../frontend/node_modules/eslint/bin/eslint.js --config ./eslint.config.mjs ./api/src ./worker/src ./shared/src",
+    "typecheck": "npm --prefix ./shared run typecheck && npm --prefix ./api run typecheck && npm --prefix ./worker run typecheck",
+    "test": "node ./scripts/run-tests.mjs",
+    "test:local": "node ./scripts/run-tests.mjs --scope local",
+    "test:env": "node ./scripts/run-tests.mjs --scope env",
+    "test:db": "node ./scripts/run-tests.mjs --scope db",
+    "test:list": "node ./scripts/run-tests.mjs --list",
+    "migrate:json-store": "node ./scripts/migrate-json-store-to-db.mjs",
+    "migrate:storage:s3": "node ./scripts/migrate-local-storage-to-s3.mjs",
+    "verify:json-store-migration": "node ./scripts/verify-json-store-db-migration.mjs",
+    "admin-web:dev": "npm --prefix ./admin-web run dev",
+    "admin-web:build": "npm --prefix ./admin-web run build",
+    "admin-web:preview": "npm --prefix ./admin-web run preview",
+    "admin-web:typecheck": "npm --prefix ./admin-web run typecheck",
+    "verify": "npm run typecheck && npm run lint && npm run arch:check && npm test",
+    "verify:db": "npm run typecheck && npm run test:db",
+    "quality:baseline": "npm run verify"
+  }
+}

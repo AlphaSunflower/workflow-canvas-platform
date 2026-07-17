@@ -1,0 +1,12 @@
+{
+  "_meta": {
+    "description": "AI 生图节点失败响应内部样例",
+    "source": "摘自 backend/data/provider-snapshots 中老张 API 真实失败快照，并完成脱敏",
+    "sanitized": true,
+    "is_real_snapshot": true,
+    "usage": "用于 AI 生图节点联调、错误分类映射与文档说明"
+  },
+  "error": {
+    "message": "provider unavailable"
+  }
+}

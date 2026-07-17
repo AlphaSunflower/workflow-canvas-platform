@@ -1,0 +1,40 @@
+{
+  "1": {
+    "inputs": {
+      "image": "pasted/image (1147).png"
+    },
+    "class_type": "LoadImage",
+    "_meta": {
+      "title": "Load Image"
+    }
+  },
+  "2": {
+    "inputs": {
+      "device": "auto",
+      "checkpoint_path": ""
+    },
+    "class_type": "LoadSharpModel",
+    "_meta": {
+      "title": "Load SHARP Model"
+    }
+  },
+  "5": {
+    "inputs": {
+      "focal_length_mm": 81.9,
+      "filename_prefix": "sharp",
+      "max_gaussians": 0,
+      "model": [
+        "2",
+        0
+      ],
+      "image": [
+        "1",
+        0
+      ]
+    },
+    "class_type": "SharpPredict",
+    "_meta": {
+      "title": "SHARP Predict (Image to PLY)"
+    }
+  }
+}

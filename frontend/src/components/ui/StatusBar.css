@@ -1,0 +1,29 @@
+.status-bar {
+  position: absolute;
+  bottom: 16px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 8px 16px;
+  background-color: var(--color-bg-secondary);
+  border: 1px solid var(--color-border-primary);
+  border-radius: 8px;
+  box-shadow: var(--node-shadow);
+  z-index: 100;
+  font-size: 11px;
+  color: var(--color-text-tertiary);
+}
+
+.status-bar__item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.status-bar__divider {
+  width: 1px;
+  height: 16px;
+  background-color: var(--color-border-primary);
+}

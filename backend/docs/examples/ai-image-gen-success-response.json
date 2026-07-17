@@ -1,0 +1,23 @@
+{
+  "_meta": {
+    "description": "AI 生图节点成功响应内部样例",
+    "source": "基于 backend/worker/src/modules/providers/laozhang/laozhang.parser.ts 可解析的成功结构整理，待首次真实 AI 生图联调后回填真实脱敏快照",
+    "sanitized": true,
+    "is_real_snapshot": false,
+    "usage": "用于 AI 生图节点联调、解析器开发与文档说明"
+  },
+  "candidates": [
+    {
+      "content": {
+        "parts": [
+          {
+            "inlineData": {
+              "mimeType": "image/png",
+              "data": "iVBORw0KGgoAAAANSUhEUgAA...SANITIZED_BASE64...=="
+            }
+          }
+        ]
+      }
+    }
+  ]
+}

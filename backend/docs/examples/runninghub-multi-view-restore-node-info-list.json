@@ -1,0 +1,26 @@
+{
+  "_meta": {
+    "description": "多视角修复双输入 nodeInfoList 成功样例",
+    "source": "基于 backend/worker/src/modules/providers/runninghub/runninghub-workflow-template.service.ts 的双输入模板装配逻辑整理，并按内部联调格式脱敏",
+    "sanitized": true,
+    "is_real_snapshot": false,
+    "usage": "用于说明 render/reference 双输入如何映射到 RunningHub 工作流节点 124.image 与 102.image"
+  },
+  "provider": "runninghub",
+  "templateKey": "multi-view-restore-v1",
+  "workflowId": "2014516111097729025",
+  "templatePath": "backend/runninghub/multi-view-restore_api.json",
+  "nodeInfoList": [
+    {
+      "nodeId": "124",
+      "fieldName": "image",
+      "fieldValue": "uploaded-render-sample.png"
+    },
+    {
+      "nodeId": "102",
+      "fieldName": "image",
+      "fieldValue": "uploaded-reference-sample.png"
+    }
+  ],
+  "savedAt": "2026-04-06T00:00:00.000Z"
+}

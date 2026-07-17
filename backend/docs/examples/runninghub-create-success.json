@@ -1,0 +1,18 @@
+{
+  "_meta": {
+    "description": "RunningHub 工作流创建成功响应内部样例",
+    "source": "主体字段来自用户提供的真实创建成功返回，并结合 backend/tests/runninghub-prompt-tips.spec.ts 与 backend/tests/providers.runninghub.spec.ts 做脱敏整理",
+    "sanitized": true,
+    "is_real_snapshot": true,
+    "usage": "用于图片转模型节点联调、promptTips 解析说明与内部文档引用"
+  },
+  "code": 0,
+  "msg": "success",
+  "data": {
+    "netWssUrl": null,
+    "taskId": "1910246754753896450",
+    "clientId": "e825290b08ca2015b8f62f0bbdb5f5f6",
+    "taskStatus": "QUEUED",
+    "promptTips": "{\"result\": true, \"error\": null, \"outputs_to_execute\": [\"9\"], \"node_errors\": {}}"
+  }
+}

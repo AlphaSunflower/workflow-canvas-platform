@@ -1,0 +1,40 @@
+{
+  "name": "workflow-canvas",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite --port 3000",
+    "build": "tsc && vite build",
+    "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
+    "preview": "vite preview --port 3000",
+    "arch:report": "node ./scripts/check-arch.mjs",
+    "arch:check": "node ./scripts/check-arch.mjs --enforce",
+    "typecheck": "tsc --noEmit",
+    "test": "node ./scripts/run-tests.mjs",
+    "verify": "npm run typecheck && npm run lint && npm run arch:check && npm test"
+  },
+  "dependencies": {
+    "@tanstack/react-query": "^5.17.0",
+    "pixi.js": "^8.19.0",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "reactflow": "^11.10.1",
+    "zustand": "^4.4.7"
+  },
+  "devDependencies": {
+    "@types/react": "^18.2.43",
+    "@types/react-dom": "^18.2.17",
+    "@typescript-eslint/eslint-plugin": "^6.14.0",
+    "@typescript-eslint/parser": "^6.14.0",
+    "@vitejs/plugin-react": "^4.2.1",
+    "autoprefixer": "^10.4.16",
+    "eslint": "^8.55.0",
+    "eslint-plugin-react-hooks": "^4.6.0",
+    "eslint-plugin-react-refresh": "^0.4.5",
+    "postcss": "^8.4.32",
+    "tailwindcss": "^3.4.0",
+    "typescript": "^5.2.2",
+    "vite": "^5.0.8"
+  }
+}

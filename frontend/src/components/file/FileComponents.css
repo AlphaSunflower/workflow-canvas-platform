@@ -1,0 +1,333 @@
+.file-drop-zone {
+  position: relative;
+  width: 100%;
+  height: 100%;
+}
+
+.file-drop-zone--dragging {
+  pointer-events: none;
+}
+
+.file-drop-zone__overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(59, 130, 246, 0.1);
+  border: 2px dashed #3B82F6;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 3000;
+  pointer-events: none;
+}
+
+.file-drop-zone__indicator {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  padding: 32px;
+  background: rgba(30, 30, 30, 0.95);
+  border-radius: 16px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+}
+
+.file-drop-zone__icon {
+  font-size: 48px;
+}
+
+.file-drop-zone__text {
+  font-size: 18px;
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.file-drop-zone__error-modal {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 400px;
+  max-height: 400px;
+  background: rgba(40, 40, 40, 0.98);
+  border-radius: 12px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+  z-index: 4000;
+  display: flex;
+  flex-direction: column;
+}
+
+.file-drop-zone__error-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  color: #EF4444;
+  font-weight: 600;
+}
+
+.file-drop-zone__error-header button {
+  background: transparent;
+  border: none;
+  color: rgba(255, 255, 255, 0.6);
+  font-size: 20px;
+  cursor: pointer;
+}
+
+.file-drop-zone__error-list {
+  flex: 1;
+  overflow-y: auto;
+  padding: 8px;
+}
+
+.file-drop-zone__error-item {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 8px;
+  background: rgba(239, 68, 68, 0.1);
+  border-radius: 6px;
+  margin-bottom: 8px;
+}
+
+.file-drop-zone__error-filename {
+  font-size: 14px;
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.file-drop-zone__error-message {
+  font-size: 12px;
+  color: #EF4444;
+}
+
+.file-drop-zone__error-footer {
+  padding: 16px;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  text-align: right;
+}
+
+.file-drop-zone__error-footer button {
+  padding: 8px 16px;
+  background: #3B82F6;
+  border: none;
+  border-radius: 6px;
+  color: white;
+  cursor: pointer;
+}
+
+.file-upload-progress {
+  padding: 12px;
+  background: rgba(40, 40, 40, 0.95);
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+.file-upload-progress__header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.file-upload-progress__icon {
+  font-size: 16px;
+}
+
+.file-upload-progress__filename {
+  flex: 1;
+  font-size: 14px;
+  color: rgba(255, 255, 255, 0.9);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.file-upload-progress__status {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.6);
+}
+
+.file-upload-progress__cancel {
+  background: transparent;
+  border: none;
+  color: rgba(255, 255, 255, 0.5);
+  font-size: 16px;
+  cursor: pointer;
+  padding: 0 4px;
+}
+
+.file-upload-progress__cancel:hover {
+  color: #EF4444;
+}
+
+.file-upload-progress__bar-container {
+  height: 4px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.file-upload-progress__bar {
+  height: 100%;
+  transition: width 0.3s ease;
+}
+
+.file-upload-progress__percentage {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.6);
+  text-align: right;
+  margin-top: 4px;
+}
+
+.file-upload-progress__error {
+  font-size: 12px;
+  color: #EF4444;
+  margin-top: 8px;
+}
+
+.file-thumbnail {
+  position: relative;
+  overflow: hidden;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.05);
+  cursor: pointer;
+}
+
+.file-thumbnail__image,
+.file-thumbnail__video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.file-thumbnail__image {
+  opacity: 0;
+  transition: opacity 0.3s;
+}
+
+.file-thumbnail__image--loaded {
+  opacity: 1;
+}
+
+.file-thumbnail__loading {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.file-thumbnail__spinner {
+  width: 24px;
+  height: 24px;
+  border: 2px solid rgba(255, 255, 255, 0.2);
+  border-top-color: #3B82F6;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+.file-thumbnail__placeholder {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.file-thumbnail__placeholder-icon {
+  font-size: 24px;
+}
+
+.file-thumbnail__placeholder-text {
+  font-size: 10px;
+  color: rgba(255, 255, 255, 0.5);
+  text-align: center;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  padding: 0 4px;
+}
+
+.file-thumbnail__video-wrapper {
+  position: relative;
+  width: 100%;
+  height: 100%;
+}
+
+.file-thumbnail__video-overlay {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 32px;
+  height: 32px;
+  background: rgba(0, 0, 0, 0.6);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.file-thumbnail__play-icon {
+  color: white;
+  font-size: 12px;
+  margin-left: 2px;
+}
+
+.file-group-display {
+  position: relative;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 8px;
+  overflow: hidden;
+  cursor: pointer;
+}
+
+.file-group-display--empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.file-group-display__empty-icon {
+  font-size: 24px;
+  opacity: 0.5;
+}
+
+.file-group-display__item {
+  position: absolute;
+  border-radius: 4px;
+  overflow: hidden;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.file-group-display__remaining {
+  position: absolute;
+  bottom: 4px;
+  right: 4px;
+  padding: 2px 6px;
+  background: rgba(0, 0, 0, 0.7);
+  border-radius: 4px;
+  font-size: 10px;
+  color: white;
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}

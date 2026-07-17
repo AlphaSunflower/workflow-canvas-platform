@@ -1,0 +1,21 @@
+{
+  "name": "@newworkflow/backend-api",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "node --import tsx ./src/main.ts",
+    "start": "node --import tsx ./src/main.ts",
+    "lint": "node ../../frontend/node_modules/eslint/bin/eslint.js --config ../eslint.config.mjs ./src",
+    "typecheck": "tsc --noEmit -p ./tsconfig.json"
+  },
+  "dependencies": {
+    "pg": "^8.13.1",
+    "sharp": "^0.34.5",
+    "tsx": "^4.20.3",
+    "typescript": "^5.8.3"
+  },
+  "devDependencies": {
+    "@types/node": "^24.6.1"
+  }
+}

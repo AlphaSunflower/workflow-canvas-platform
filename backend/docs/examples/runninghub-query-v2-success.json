@@ -1,0 +1,23 @@
+{
+  "_meta": {
+    "description": "RunningHub 查询结果 V2 成功响应内部样例",
+    "source": "基于 backend/worker/src/modules/providers/runninghub/runninghub.parser.ts 支持的结果结构与 backend/tests/providers.runninghub.spec.ts、backend/tests/ai-image-to-ply.executor.spec.ts 整理",
+    "sanitized": true,
+    "is_real_snapshot": false,
+    "usage": "用于图片转模型节点联调、结果解析、results[0] 约束说明与错误排查"
+  },
+  "taskId": "1910246754753896450",
+  "status": "SUCCESS",
+  "clientId": "e825290b08ca2015b8f62f0bbdb5f5f6",
+  "promptTips": "{\"result\": true}",
+  "errorCode": null,
+  "errorMessage": null,
+  "results": [
+    {
+      "fileUrl": "https://rh-files.example.com/output/model-output.ply",
+      "fileType": "ply",
+      "taskCostTime": 18,
+      "nodeId": "5"
+    }
+  ]
+}

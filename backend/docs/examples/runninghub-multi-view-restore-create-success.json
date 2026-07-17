@@ -1,0 +1,18 @@
+{
+  "_meta": {
+    "description": "多视角修复 RunningHub 创建成功响应样例",
+    "source": "基于 RunningHub 创建成功响应结构与多视角修复节点一期约定字段整理，并按内部联调格式脱敏",
+    "sanitized": true,
+    "is_real_snapshot": false,
+    "usage": "用于说明多视角修复节点的 taskId、clientId、taskStatus 与 promptTips 解析方式"
+  },
+  "code": 0,
+  "msg": "success",
+  "data": {
+    "netWssUrl": null,
+    "taskId": "1910246754753896450",
+    "clientId": "sanitized-client-id-multi-view",
+    "taskStatus": "QUEUED",
+    "promptTips": "{\"result\": true, \"error\": null, \"outputs_to_execute\": [\"127\"], \"node_errors\": {}}"
+  }
+}

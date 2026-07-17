@@ -1,0 +1,14 @@
+{
+  "_meta": {
+    "description": "RunningHub 文件上传成功响应内部样例",
+    "source": "基于 backend/worker/src/modules/providers/runninghub 的当前解析实现与 backend/tests/providers.runninghub.spec.ts 整理，当前为脱敏内部标准样例",
+    "sanitized": true,
+    "is_real_snapshot": false,
+    "usage": "用于图片转模型节点联调、上传返回解析开发与内部文档说明"
+  },
+  "code": 0,
+  "msg": "success",
+  "data": {
+    "fileName": "runninghub-uploaded-input.png"
+  }
+}

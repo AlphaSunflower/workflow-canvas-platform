@@ -1,0 +1,174 @@
+.ai-task-status {
+  padding: 12px;
+  background: rgba(40, 40, 40, 0.95);
+  border-radius: 8px;
+}
+
+.ai-task-status__header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.ai-task-status__icon {
+  font-size: 16px;
+}
+
+.ai-task-status__status {
+  flex: 1;
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.ai-task-status__progress {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.ai-task-status__cancel-btn {
+  padding: 4px 12px;
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 4px;
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 11px;
+  cursor: pointer;
+}
+
+.ai-task-status__cancel-btn:hover {
+  background: rgba(239, 68, 68, 0.2);
+  border-color: #EF4444;
+  color: #EF4444;
+}
+
+.ai-task-status__progress-bar {
+  height: 4px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 2px;
+  margin-top: 8px;
+  overflow: hidden;
+}
+
+.ai-task-status__progress-fill {
+  height: 100%;
+  transition: width 0.3s ease;
+}
+
+.ai-task-status__message {
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.6);
+  margin-top: 8px;
+}
+
+.ai-processing-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  transition: opacity 0.3s;
+}
+
+.ai-processing-overlay__backdrop {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(4px);
+}
+
+.ai-processing-overlay__border {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  border: 2px solid transparent;
+  border-radius: inherit;
+  animation: border-flow 2s linear infinite;
+}
+
+.ai-processing-overlay__content {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding: 16px;
+}
+
+.ai-processing-overlay__spinner {
+  width: 32px;
+  height: 32px;
+  border: 3px solid rgba(255, 255, 255, 0.2);
+  border-top-color: #3B82F6;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+.ai-processing-overlay__text {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.9);
+  text-align: center;
+}
+
+.ai-processing-overlay__cancel-btn {
+  margin-top: 8px;
+  padding: 6px 16px;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 6px;
+  color: rgba(255, 255, 255, 0.8);
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.ai-processing-overlay__cancel-btn:hover {
+  background: rgba(239, 68, 68, 0.2);
+  border-color: #EF4444;
+  color: #EF4444;
+}
+
+.ai-processing-overlay__status {
+  position: absolute;
+  bottom: 8px;
+  right: 8px;
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes border-flow {
+  0% {
+    border-color: transparent;
+    border-top-color: #3B82F6;
+  }
+  25% {
+    border-color: transparent;
+    border-right-color: #3B82F6;
+  }
+  50% {
+    border-color: transparent;
+    border-bottom-color: #3B82F6;
+  }
+  75% {
+    border-color: transparent;
+    border-left-color: #3B82F6;
+  }
+  100% {
+    border-color: transparent;
+    border-top-color: #3B82F6;
+  }
+}

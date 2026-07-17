@@ -1,0 +1,22 @@
+{
+  "_meta": {
+    "description": "老张 API 成功响应内部标准样例",
+    "source": "基于 backend/worker/src/modules/providers/laozhang 的当前解析实现与 backend/tests/providers.laozhang.spec.ts 整理，不是官方文档原文",
+    "sanitized": true,
+    "usage": "用于联调、解析器开发、错误排查和内部文档说明"
+  },
+  "candidates": [
+    {
+      "content": {
+        "parts": [
+          {
+            "inlineData": {
+              "mimeType": "image/png",
+              "data": "iVBORw0KGgoAAAANSUhEUgAA...SANITIZED_BASE64...=="
+            }
+          }
+        ]
+      }
+    }
+  ]
+}

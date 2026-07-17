@@ -1,0 +1,91 @@
+{
+  "runtime": {
+    "nodeEnv": "development",
+    "host": "127.0.0.1"
+  },
+  "services": {
+    "api": {
+      "port": 3100
+    },
+    "worker": {
+      "port": 3200,
+      "pollIntervalMs": 5000
+    }
+  },
+  "persistence": {
+    "mode": "db",
+    "cutoverStage": "db-read-write"
+  },
+  "database": {
+    "url": null,
+    "host": "127.0.0.1",
+    "port": 5432,
+    "database": "newworkflow",
+    "user": "postgres",
+    "password": null,
+    "ssl": false,
+    "maxPoolSize": 10,
+    "idleTimeoutMillis": 30000,
+    "connectionTimeoutMillis": 3000,
+    "statementTimeoutMillis": 30000,
+    "healthcheckTimeoutMillis": 1000
+  },
+  "storage": {
+    "provider": "local",
+    "s3": {
+      "endpoint": "http://127.0.0.1:9000",
+      "region": "us-east-1",
+      "bucket": "newworkflow",
+      "accessKeyId": "CHANGE_ME_S3_ACCESS_KEY_ID",
+      "secretAccessKey": "CHANGE_ME_S3_SECRET_ACCESS_KEY",
+      "forcePathStyle": true,
+      "publicBaseUrl": null
+    }
+  },
+  "auth": {
+    "jwt": {
+      "issuer": "newworkflow-backend",
+      "accessTokenSecret": "CHANGE_ME_ACCESS_TOKEN_SECRET",
+      "accessTokenTtlSeconds": 3600,
+      "refreshTokenSecret": "CHANGE_ME_REFRESH_TOKEN_SECRET",
+      "refreshTokenTtlSeconds": 2592000
+    },
+    "session": {
+      "rotateRefreshTokenOnUse": true
+    },
+    "bootstrapAdmin": {
+      "email": "admin@example.com",
+      "password": "CHANGE_ME_ADMIN_PASSWORD",
+      "displayName": "System Admin"
+    }
+  },
+  "providers": {
+    "laozhang": {
+      "apiKey": "YOUR_LAOZHANG_API_KEY",
+      "apiUrl": "https://api.laozhang.ai/v1beta/models/gemini-3-pro-image-preview:generateContent",
+      "openaiApiBaseUrl": "https://api.laozhang.ai/v1",
+      "sora2Official": {
+        "apiKey": "YOUR_LAOZHANG_SORA2OFFICIAL_API_KEY",
+        "apiBaseUrl": "https://api.laozhang.ai/v1"
+      },
+      "vision": {
+        "apiUrl": "https://api.laozhang.ai/v1/chat/completions",
+        "model": "gemini-2.5-flash",
+        "timeoutMs": 180000
+      },
+      "veo": {
+        "apiBaseUrl": "https://api.laozhang.ai/v1",
+        "pollIntervalMs": 5000,
+        "timeoutMs": 600000
+      }
+    },
+    "runninghub": {
+      "apiKey": "YOUR_RUNNINGHUB_API_KEY",
+      "apiBaseUrl": "https://www.runninghub.cn",
+      "maxConcurrency": 3
+    }
+  },
+  "paths": {
+    "providerSnapshotDir": "data/provider-snapshots"
+  }
+}

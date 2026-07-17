@@ -1,0 +1,11 @@
+{
+  "_meta": {
+    "description": "老张 API 失败响应内部标准样例",
+    "source": "基于 backend/worker/src/modules/providers/laozhang 的当前错误分类实现与 backend/tests/providers.laozhang.spec.ts 整理，不是官方文档原文",
+    "sanitized": true,
+    "usage": "用于联调、错误分类映射和内部文档说明"
+  },
+  "error": {
+    "message": "provider unavailable"
+  }
+}

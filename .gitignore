@@ -1,0 +1,63 @@
+# Dependencies
+node_modules/
+.pnp
+.pnp.js
+.npm-cache/
+backend/.npm-cache/
+
+# Build output
+dist/
+dist-tests/
+build/
+*.tsbuildinfo
+
+# Environment and secrets
+.env
+.env.local
+.env.*.local
+
+# Claude Code local settings
+.claude/settings.local.json
+
+# Test temp files
+frontend/.test-auth-temp/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Logs
+*.log
+logs/
+
+# Temp directories
+.tmp/
+.codex-logs/
+.codegraph/
+*.tmp
+
+# Backend runtime data
+backend/data/
+backend/storage/
+backend/.tmp/
+
+# Test coverage
+coverage/
+.nyc_output/
+
+# Package lock
+# Keep package-lock.json and bun.lock for reproducible installs
+
+# Turbo
+.turbo/
+
+# Local scripts that are environment-specific
+*.local

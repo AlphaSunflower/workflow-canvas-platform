@@ -1,0 +1,154 @@
+.group-node {
+  position: relative;
+  border: 2px dashed #6B7280;
+  border-radius: 12px;
+  background: rgba(107, 114, 128, 0.05);
+  transition: border-color 0.2s, background 0.2s;
+}
+
+.group-node--selected {
+  border-color: #6B7280;
+  background: rgba(107, 114, 128, 0.1);
+}
+
+.group-node--locked {
+  opacity: 0.7;
+}
+
+.group-node--dragging {
+  opacity: 0.8;
+}
+
+.group-node__handle {
+  width: 8px;
+  height: 8px;
+  background: #6B7280;
+  border: 2px solid white;
+  border-radius: 50%;
+}
+
+.group-node__header {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  right: 8px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.group-node__title {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.group-node__icon {
+  font-size: 14px;
+}
+
+.group-node__count {
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.group-node__actions {
+  display: flex;
+  gap: 4px;
+}
+
+.group-node__action-btn {
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.1);
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 12px;
+}
+
+.group-node__action-btn:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.group-node__action-btn--danger:hover {
+  background: rgba(239, 68, 68, 0.2);
+}
+
+.group-node__content {
+  padding: 32px 12px 12px;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.group-node__empty {
+  color: rgba(255, 255, 255, 0.4);
+  font-size: 12px;
+}
+
+.group-node__members {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.group-node__member-preview {
+  width: 32px;
+  height: 32px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.group-node__more {
+  width: 32px;
+  height: 32px;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.group-node__comment {
+  position: absolute;
+  bottom: 8px;
+  left: 8px;
+  right: 8px;
+  padding: 8px;
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: 6px;
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.group-node__lock-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 10px;
+}
+
+.group-node__lock-icon {
+  font-size: 24px;
+  opacity: 0.8;
+}

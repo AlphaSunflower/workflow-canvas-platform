@@ -1,0 +1,18 @@
+{
+  "_meta": {
+    "description": "多视角修复 RunningHub 失败响应样例",
+    "source": "基于多视角修复执行器失败判定与 RunningHub promptTips/结果不匹配场景整理的脱敏失败样例",
+    "sanitized": true,
+    "is_real_snapshot": false,
+    "usage": "用于说明 promptTips 异常与未命中输出节点 127 时的排障参考"
+  },
+  "code": 0,
+  "msg": "success",
+  "data": {
+    "netWssUrl": null,
+    "taskId": "1910246754753896450",
+    "clientId": "sanitized-client-id-multi-view",
+    "taskStatus": "QUEUED",
+    "promptTips": "{\"result\": true, \"error\": \"workflow output mismatch\", \"outputs_to_execute\": [\"127\"], \"node_errors\": {}}"
+  }
+}

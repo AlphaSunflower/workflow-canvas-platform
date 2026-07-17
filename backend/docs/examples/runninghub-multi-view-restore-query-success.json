@@ -1,0 +1,29 @@
+{
+  "_meta": {
+    "description": "多视角修复 RunningHub 查询结果成功响应样例",
+    "source": "基于 backend/tests/ai-multi-view-restore.executor.spec.ts 与执行器结果提取逻辑整理的脱敏成功样例",
+    "sanitized": true,
+    "is_real_snapshot": false,
+    "usage": "用于说明查询结果中优先命中 nodeId=127 的提取规则"
+  },
+  "taskId": "1910246754753896450",
+  "status": "SUCCESS",
+  "clientId": "sanitized-client-id-multi-view",
+  "promptTips": "{\"result\": true}",
+  "errorCode": null,
+  "errorMessage": null,
+  "results": [
+    {
+      "fileUrl": "https://rh-files.example.com/output/multi-view-restore-127.png",
+      "fileType": "png",
+      "taskCostTime": 18,
+      "nodeId": "127"
+    },
+    {
+      "fileUrl": "https://rh-files.example.com/output/multi-view-debug-preview.png",
+      "fileType": "png",
+      "taskCostTime": 18,
+      "nodeId": "999"
+    }
+  ]
+}

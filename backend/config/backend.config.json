@@ -1,0 +1,79 @@
+{
+  "runtime": {
+    "nodeEnv": "development",
+    "host": "127.0.0.1"
+  },
+  "services": {
+    "api": {
+      "port": 3100
+    },
+    "worker": {
+      "port": 3200,
+      "pollIntervalMs": 5000
+    }
+  },
+  "persistence": {
+    "mode": "db",
+    "cutoverStage": "db-read-write"
+  },
+  "database": {
+    "url": "postgresql://postgres:123456@127.0.0.1:5432/newworkflow",
+    "host": "127.0.0.1",
+    "port": 5432,
+    "database": "newworkflow",
+    "user": "postgres",
+    "password": "123456",
+    "ssl": false,
+    "maxPoolSize": 10,
+    "idleTimeoutMillis": 30000,
+    "connectionTimeoutMillis": 3000,
+    "statementTimeoutMillis": 30000,
+    "healthcheckTimeoutMillis": 1000
+  },
+  "auth": {
+    "jwt": {
+      "issuer": "newworkflow-backend",
+      "accessTokenSecret": "d02f1779750841f8b4de65e47a913e89",
+      "accessTokenTtlSeconds": 3600,
+      "refreshTokenSecret": "cd311f4121c24cf8b761775f9dafae78",
+      "refreshTokenTtlSeconds": 2592000
+    },
+    "session": {
+      "rotateRefreshTokenOnUse": false
+    },
+    "bootstrapAdmin": {
+      "email": "admin@example.com",
+      "password": "Admin123456!",
+      "displayName": "System Admin"
+    }
+  },
+  "providers": {
+    "laozhang": {
+      "apiKey": "sk-bQfq7Zzf9OZ5XkdPCf3254E2D3D64673Be76D08f2830EbCd",
+      "apiUrl": "https://api.laozhang.ai/v1beta/models/gemini-3-pro-image-preview:generateContent",
+      "openaiApiBaseUrl": "https://api.laozhang.ai/v1",
+      "sora2Official": {
+        "apiKey": "sk-8YBdUaxEHTF1sNAHC50fE6A472Ab4111BeEc018fB3294dAc",
+        "apiBaseUrl": "https://api.laozhang.ai/v1"
+      },
+      "vision": {
+        "apiUrl": "https://api.laozhang.ai/v1/chat/completions",
+        "model": "gemini-3-flash-preview",
+        "timeoutMs": 180000
+      },
+      "veo": {
+        "apiBaseUrl": "https://api.laozhang.ai/v1",
+        "pollIntervalMs": 5000,
+        "timeoutMs": 600000
+      }
+    },
+    "runninghub": {
+      "apiKey": "969b6d5d087f4c8b96ac392be362d9bc",
+      "apiBaseUrl": "https://www.runninghub.cn",
+      "maxConcurrency": 3
+    }
+  },
+  "paths": {
+    "providerSnapshotDir": "data/provider-snapshots"
+  }
+}
