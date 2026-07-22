@@ -67,6 +67,8 @@ export type {
   StoryboardShotRuntimeState,
   StoryboardShotData,
   StoryboardConfig,
+  StoryboardCreationType,
+  StoryboardVideoDuration,
 } from './node.types';
 
 export type {

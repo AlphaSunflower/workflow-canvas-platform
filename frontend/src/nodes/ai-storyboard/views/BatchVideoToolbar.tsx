@@ -1,27 +1,25 @@
 import React from 'react';
 
+import type { StoryboardVideoDuration } from '@/types';
 import {
   AI_VIDEO_GEN_ASPECT_RATIO_OPTIONS,
+  AI_VIDEO_GEN_DURATION_OPTIONS,
   AI_VIDEO_GEN_MODEL_OPTIONS,
   AI_VIDEO_GEN_RESOLUTION_OPTIONS,
 } from '@/nodes/ai-video-gen/constants';
 
 interface BatchVideoToolbarProps {
   model: string;
-  duration: 8;
+  duration: StoryboardVideoDuration;
   aspectRatio: string;
   resolution: string;
   disabled?: boolean;
   onModelChange: (value: string) => void;
-  onDurationChange: (value: 8) => void;
+  onDurationChange: (value: StoryboardVideoDuration) => void;
   onAspectRatioChange: (value: string) => void;
   onResolutionChange: (value: string) => void;
   onApply: () => void;
 }
-
-const VIDEO_DURATION_OPTIONS = [
-  { value: 8 as const, label: '8s' },
-] as const;
 
 function renderSelectField(
   label: string,
@@ -69,7 +67,7 @@ export const BatchVideoToolbar: React.FC<BatchVideoToolbarProps> = ({
   <div className="ai-storyboard-workbench ai-storyboard-workbench--batch-video">
     <div className="ai-storyboard-workbench__fields">
       {renderSelectField('Video model', model, disabled, onModelChange, AI_VIDEO_GEN_MODEL_OPTIONS)}
-      {renderSelectField('Duration', String(duration), disabled, (value) => onDurationChange(Number(value) as 8), VIDEO_DURATION_OPTIONS)}
+      {renderSelectField('Duration', String(duration), disabled, (value) => onDurationChange(Number(value) as StoryboardVideoDuration), AI_VIDEO_GEN_DURATION_OPTIONS)}
       {renderSelectField('Aspect', aspectRatio, disabled, onAspectRatioChange, AI_VIDEO_GEN_ASPECT_RATIO_OPTIONS, (value) => (
         resolution === '4k' && value !== '16:9'
       ))}

@@ -61,6 +61,17 @@ test('createStoryboardActionFacade exposes all storyboard actions', () => {
         model: 'stub-model',
         referenceCount: 0,
         promptVersion: 'v1',
+        mode: 'image' as const,
+      },
+    }),
+    arrangeStoryboardFromStory: async () => ({
+      success: true,
+      data: {
+        shots: [],
+        model: 'stub-model',
+        referenceCount: 0,
+        promptVersion: 'v1',
+        mode: 'story' as const,
       },
     }),
     getExecutionRuntimeGroupState: () => null,

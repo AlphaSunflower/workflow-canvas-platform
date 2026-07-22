@@ -1018,7 +1018,7 @@ const AIImageGenNodeInner: React.FC<AINodeProps> = ({ data, selected }) => {
                         </div>
                       ) : (
                         <div className="ai-image-gen-node__group-placeholder">
-                          鎷栧叆鍥剧墖鍒拌杈撳叆缁?                        </div>
+                          拖入图片到该输入                        </div>
                       )}
                     </div>
 

@@ -154,7 +154,7 @@ test("aiVideoGen execution node rejects invalid prompt/model/duration/reference 
       executionMode: "legacy-grouped-task",
       prompt: "ok",
       model: "veo-3.1-fast-generate-preview",
-      duration: 4,
+      duration: 5,
       groups: [
         {
           groupId: "group-1",

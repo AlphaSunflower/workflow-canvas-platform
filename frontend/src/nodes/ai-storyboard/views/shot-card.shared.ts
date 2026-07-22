@@ -12,8 +12,10 @@ import {
 
 export interface StoryboardShotImagePreview {
   url?: string;
+  fallbackUrl?: string;
   label: string;
   sourceNode?: FileNodeData;
+  mediaType?: 'image' | 'video';
 }
 
 export const STORYBOARD_IMAGE_MODEL_OPTIONS = (

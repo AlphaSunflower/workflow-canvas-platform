@@ -17,11 +17,13 @@ import {
 } from './groups';
 export {
   AI_VIDEO_GEN_DEFAULT_ASPECT_RATIO,
+  AI_VIDEO_GEN_DEFAULT_DURATION_SECONDS,
   AI_VIDEO_GEN_DEFAULT_MODEL,
   AI_VIDEO_GEN_DEFAULT_RESOLUTION,
-  AI_VIDEO_GEN_DURATION_SECONDS,
+  AI_VIDEO_GEN_DURATION_OPTIONS,
   AI_VIDEO_GEN_PROVIDER,
   AI_VIDEO_GEN_SUPPORTED_ASPECT_RATIOS,
+  AI_VIDEO_GEN_SUPPORTED_DURATIONS_SECONDS,
   AI_VIDEO_GEN_SUPPORTED_MODELS,
   AI_VIDEO_GEN_SUPPORTED_RESOLUTIONS,
   isAIVideoGenSupportedModel,
@@ -32,12 +34,12 @@ export {
   normalizeAIVideoGenResolution,
   resolveAIVideoGenSize,
   type AIVideoGenSupportedAspectRatio,
+  type AIVideoGenSupportedDurationSeconds,
   type AIVideoGenSupportedModel,
   type AIVideoGenSupportedResolution,
 } from './constants';
 import {
   AI_VIDEO_GEN_DEFAULT_MODEL,
-  AI_VIDEO_GEN_DURATION_SECONDS,
   AI_VIDEO_GEN_PROVIDER,
   normalizeAIVideoGenDuration,
   normalizeAIVideoGenModel,
@@ -89,7 +91,7 @@ export function validateAIVideoGenExecutionInput(input: {
   if (!normalizeAIVideoGenDuration(input.duration)) {
     return {
       valid: false,
-      reason: 'AI 视频生成节点当前仅支持 8 秒时长。',
+      reason: 'AI 视频生成节点的时长不在支持范围内。',
     };
   }
 
@@ -217,7 +219,7 @@ function buildAIVideoGenGroupPlan(
     config: {
       ...node.config,
       model,
-      duration: AI_VIDEO_GEN_DURATION_SECONDS,
+      duration: videoParameters.duration,
       inputGroups: (Array.isArray(node.config.inputGroups) ? node.config.inputGroups : []).filter(
         (group) => group.id === groupId,
       ),

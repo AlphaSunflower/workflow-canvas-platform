@@ -1,16 +1,26 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
 import type { FileNodeData } from '@/types';
 import { useImageResource } from '@/hooks/image/useImageResource';
 import { useProtectedResourceUrl } from '@/hooks/file/useProtectedResourceUrl';
 import { getFileNodeImageThumbnailUrl } from '@/services/image/image-asset';
+import { httpClient } from '@/api';
 
 interface StoryboardShotPreviewProps {
   src?: string;
+  fallbackSrc?: string;
   sourceNode?: FileNodeData;
   alt: string;
   className?: string;
   fallback?: React.ReactNode;
+  mediaType?: 'image' | 'video';
+}
+
+function isVideoUrl(url: string | undefined): boolean {
+  if (!url) return false;
+  const lower = url.toLowerCase();
+  return lower.endsWith('.mp4') || lower.endsWith('.webm') || lower.endsWith('.mov')
+    || lower.includes('.mp4?') || lower.includes('.webm?') || lower.includes('.mov?');
 }
 
 const EMPTY_IMAGE_NODE: Pick<FileNodeData, 'id' | 'fileId' | 'imageAsset' | 'thumbnailUrl' | 'metadata'> = {
@@ -23,25 +33,71 @@ const EMPTY_IMAGE_NODE: Pick<FileNodeData, 'id' | 'fileId' | 'imageAsset' | 'thu
 
 export const StoryboardShotPreview: React.FC<StoryboardShotPreviewProps> = ({
   src,
+  fallbackSrc,
   sourceNode,
   alt,
   className,
   fallback = null,
+  mediaType,
 }) => {
   const [viewerOpen, setViewerOpen] = useState(false);
+  const [activeSrc, setActiveSrc] = useState(src);
+  const [hasAttemptedFallback, setHasAttemptedFallback] = useState(false);
+
+  // Reset fallback state when src changes
+  useEffect(() => {
+    setActiveSrc(src);
+    setHasAttemptedFallback(false);
+  }, [src]);
+
   const imageResource = useImageResource(sourceNode ?? EMPTY_IMAGE_NODE, 'canvas', {
-    enabled: Boolean(sourceNode && sourceNode.type === 'image' && !src),
+    enabled: Boolean(sourceNode && sourceNode.type === 'image' && !activeSrc),
   });
   const sourceThumbnailUrl = sourceNode && sourceNode.type === 'image'
     ? getFileNodeImageThumbnailUrl(sourceNode)
     : undefined;
-  const protectedResourceUrl = src ?? imageResource.requestUrl ?? sourceThumbnailUrl;
-  const protectedResource = useProtectedResourceUrl(protectedResourceUrl, {
-    enabled: Boolean(protectedResourceUrl),
-  });
-  const resolvedSrc = src
-    ? protectedResource.resolvedUrl
-    : (imageResource.src ?? protectedResource.resolvedUrl);
+  const protectedResourceUrl = activeSrc ?? imageResource.requestUrl ?? sourceThumbnailUrl;
+  const isVideo = useMemo(
+    () => mediaType === 'video' || (mediaType !== 'image' && isVideoUrl(protectedResourceUrl)),
+    [mediaType, protectedResourceUrl],
+  );
+
+  // For video files, use token-based URL directly instead of blob fetch
+  // (video element can't set Authorization headers, and blob fetch is slow for large files)
+  const videoDirectUrl = useMemo(() => {
+    if (!isVideo || !protectedResourceUrl) return undefined;
+    const token = httpClient.getAuthToken();
+    if (!token) return protectedResourceUrl;
+    const separator = protectedResourceUrl.includes('?') ? '&' : '?';
+    return `${protectedResourceUrl}${separator}token=${encodeURIComponent(token)}`;
+  }, [isVideo, protectedResourceUrl]);
+
+  // Only use protected resource hook for non-video files
+  const protectedResource = useProtectedResourceUrl(
+    isVideo ? undefined : protectedResourceUrl,
+    { enabled: Boolean(protectedResourceUrl) && !isVideo },
+  );
+
+  // Auto-fallback: when the primary URL fails and fallbackSrc is available, retry with fallback
+  useEffect(() => {
+    if (
+      !protectedResource.error
+      || hasAttemptedFallback
+      || !fallbackSrc
+      || fallbackSrc === activeSrc
+    ) {
+      return;
+    }
+
+    setHasAttemptedFallback(true);
+    setActiveSrc(fallbackSrc);
+  }, [activeSrc, fallbackSrc, hasAttemptedFallback, protectedResource.error]);
+
+  const resolvedSrc = isVideo
+    ? videoDirectUrl
+    : activeSrc
+      ? protectedResource.resolvedUrl
+      : (imageResource.src ?? protectedResource.resolvedUrl);
 
   const openViewer = useCallback((event: React.MouseEvent<HTMLButtonElement>) => {
     event.preventDefault();
@@ -73,6 +129,13 @@ export const StoryboardShotPreview: React.FC<StoryboardShotPreviewProps> = ({
   }, [closeViewer, viewerOpen]);
 
   if (!resolvedSrc) {
+    if (activeSrc && protectedResource.error && hasAttemptedFallback) {
+      return (
+        <div className="ai-storyboard-shot-preview__fallback ai-storyboard-shot-preview__error">
+          图片加载失败
+        </div>
+      );
+    }
     return <>{fallback}</>;
   }
 
@@ -84,12 +147,24 @@ export const StoryboardShotPreview: React.FC<StoryboardShotPreviewProps> = ({
         onClick={openViewer}
         title="查看完整预览"
       >
-        <img
-          src={resolvedSrc}
-          alt={alt}
-          className={className}
-          draggable={false}
-        />
+        {isVideo ? (
+          <video
+            src={resolvedSrc}
+            className={className}
+            muted
+            loop
+            autoPlay
+            playsInline
+            draggable={false}
+          />
+        ) : (
+          <img
+            src={resolvedSrc}
+            alt={alt}
+            className={className}
+            draggable={false}
+          />
+        )}
       </button>
 
       {viewerOpen && typeof document !== 'undefined' ? createPortal(
@@ -99,7 +174,7 @@ export const StoryboardShotPreview: React.FC<StoryboardShotPreviewProps> = ({
               <div className="file-node__viewer-toolbar-main">
                 <div className="file-node__viewer-title-block">
                   <span className="file-node__viewer-title">{alt}</span>
-                  <span className="file-node__viewer-meta">完整预览</span>
+                  <span className="file-node__viewer-meta">{isVideo ? '视频预览' : '完整预览'}</span>
                 </div>
               </div>
 
@@ -113,12 +188,24 @@ export const StoryboardShotPreview: React.FC<StoryboardShotPreviewProps> = ({
             </div>
 
             <div className="file-node__viewer-stage ai-storyboard-shot-viewer__stage">
-              <img
-                src={resolvedSrc}
-                alt={alt}
-                className="file-node__viewer-image ai-storyboard-shot-viewer__image"
-                draggable={false}
-              />
+              {isVideo ? (
+                <video
+                  src={resolvedSrc}
+                  className="file-node__viewer-image ai-storyboard-shot-viewer__image"
+                  controls
+                  autoPlay
+                  muted
+                  loop
+                  draggable={false}
+                />
+              ) : (
+                <img
+                  src={resolvedSrc}
+                  alt={alt}
+                  className="file-node__viewer-image ai-storyboard-shot-viewer__image"
+                  draggable={false}
+                />
+              )}
             </div>
           </div>
         </div>,

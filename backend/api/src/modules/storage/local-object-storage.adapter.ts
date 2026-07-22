@@ -1,4 +1,4 @@
-import { constants as fsConstants } from "node:fs";
+import { constants as fsConstants, createReadStream } from "node:fs";
 import fs from "node:fs/promises";
 import { randomUUID } from "node:crypto";
 import path from "node:path";
@@ -6,6 +6,7 @@ import path from "node:path";
 import type {
   ObjectStorageAdapter,
   ObjectStorageReadResult,
+  ObjectStorageStreamResult,
 } from "./object-storage.adapter.ts";
 
 function normalizeStorageKey(storageKey: string): string {
@@ -62,6 +63,19 @@ export class LocalObjectStorageAdapter implements ObjectStorageAdapter {
     return {
       buffer,
       byteLength: buffer.length,
+      storageKey: normalizeStorageKey(storageKey),
+      lastModifiedAt: new Date(stat.mtimeMs).toISOString(),
+    };
+  }
+
+  async readStream(storageKey: string): Promise<ObjectStorageStreamResult> {
+    const absolutePath = this.resolveStoragePath(storageKey);
+    const stat = await fs.stat(absolutePath);
+    const stream = createReadStream(absolutePath);
+
+    return {
+      stream,
+      byteLength: stat.size,
       storageKey: normalizeStorageKey(storageKey),
       lastModifiedAt: new Date(stat.mtimeMs).toISOString(),
     };

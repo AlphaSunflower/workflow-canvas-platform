@@ -280,6 +280,7 @@ export async function runStoryboardShotVideo(
   const resolvedVideoParameters = normalizeAIVideoGenParameters({
     aspectRatio: persistedShot.videoAspectRatio,
     resolution: persistedShot.videoResolution,
+    duration: persistedShot.videoDuration,
   });
 
   const runVideoAttempt = async (attemptNo: number): Promise<void> => {
@@ -337,7 +338,7 @@ export async function runStoryboardShotVideo(
       nodeTitle: dependencies.getNodeNameById(nodeId),
       prompt,
       model: resolvedVideoModel,
-      duration: 8,
+      duration: resolvedVideoParameters.duration,
       aspectRatio: resolvedVideoParameters.aspectRatio,
       resolution: resolvedVideoParameters.resolution,
       size: resolvedVideoParameters.size,
@@ -415,6 +416,9 @@ export async function runStoryboardShotVideo(
         : item
     )));
 
+    let lastPendingCommit: Promise<void> | undefined;
+    let observedResultFileId: string | undefined;
+
     const finalSnapshot = await dependencies.startExecutionPolling({
       runId: execution.runId,
       workflowId: persistedWorkflow.id,
@@ -424,6 +428,10 @@ export async function runStoryboardShotVideo(
         const snapshotTask = snapshot.tasks.find((item) => item.groupId === shotId) ?? snapshot.tasks[0];
         if (!snapshotTask) {
           return;
+        }
+
+        if (typeof snapshotTask.resultFileId === 'string' && snapshotTask.resultFileId.length > 0) {
+          observedResultFileId = snapshotTask.resultFileId;
         }
 
         dependencies.setStoryboardNodeExecutionState(nodeId, {
@@ -466,7 +474,20 @@ export async function runStoryboardShotVideo(
           error: snapshotTask.error ?? undefined,
         });
 
-        void dependencies.commitBackendExecutionOutputs(
+        dependencies.patchStoryboardShotState(nodeId, shotId, (shots) => shots.map((item) => (
+          item.id === shotId
+            ? {
+              ...item,
+              videoProgress: typeof snapshotTask.progress === 'number'
+                ? snapshotTask.progress
+                : item.videoProgress,
+              videoGenStatus: 'generating' as const,
+              videoError: snapshotTask.error ?? undefined,
+            }
+            : item
+        )));
+
+        lastPendingCommit = dependencies.commitBackendExecutionOutputs(
           persistedNode,
           snapshot,
           dependencies.createOutputCommitInput(
@@ -475,27 +496,15 @@ export async function runStoryboardShotVideo(
           ),
         );
 
-        dependencies.patchStoryboardShotState(nodeId, shotId, (shots) => shots.map((item) => (
-          item.id === shotId
-            ? {
-              ...item,
-              videoRunId: snapshot.runId,
-              videoGenStatus: snapshotTask.status === 'completed'
-                ? 'completed'
-                : snapshotTask.status === 'failed'
-                  ? 'failed'
-                  : 'generating',
-              videoProgress: snapshotTask.status === 'completed'
-                ? 100
-                : snapshotTask.progress,
-              videoError: snapshotTask.status === 'failed'
-                ? snapshotTask.error ?? snapshotTask.message ?? undefined
-                : undefined,
-            }
-            : item
-        )));
+        // Note: Don't set videoGenStatus/videoFileId here to avoid race condition
+        // with commitBackendExecutionOutputs. The final state is set in the
+        // post-polling success path below.
       },
     });
+
+    if (lastPendingCommit) {
+      await lastPendingCommit;
+    }
 
     const finalTask = finalSnapshot.tasks.find((item) => item.groupId === shotId) ?? finalSnapshot.tasks[0];
     if (!finalTask) {
@@ -516,13 +525,58 @@ export async function runStoryboardShotVideo(
           ? {
             ...item,
             videoRunId: finalSnapshot.runId,
-            videoGenStatus: 'completed',
+            videoGenStatus: 'completed' as const,
             videoProgress: 100,
             videoError: undefined,
+            videoFileId: finalTask.resultFileId ?? undefined,
           }
           : item
       )));
 
+      notifySuccess('生成视频完成', `镜头 ${persistedShot.order} 已生成视频。`);
+      return;
+    }
+
+    if (finalTask.status === 'completed') {
+      const committedState = dependencies.getCommittedStoryboardGroupState(nodeId, shotId, {
+        workflowId: persistedWorkflow.id,
+        runId: finalSnapshot.runId,
+        taskId: finalTask.taskId,
+        fileType: 'video',
+      });
+      if (committedState) {
+        dependencies.patchStoryboardShotState(nodeId, shotId, (shots) => shots.map((item) => (
+          item.id === shotId
+            ? {
+              ...item,
+              videoRunId: finalSnapshot.runId,
+              videoGenStatus: 'completed',
+              videoProgress: 100,
+              videoError: undefined,
+              ...(typeof committedState.resultFileId === 'string' ? { videoFileId: committedState.resultFileId } : {}),
+            }
+            : item
+        )));
+        notifySuccess('生成视频完成', `镜头 ${persistedShot.order} 已生成视频。`);
+        return;
+      }
+    }
+
+    // Recovery: if we observed a resultFileId during polling (worker set it before crashing),
+    // treat the task as completed even though the backend task status is still 'processing'.
+    if (typeof observedResultFileId === 'string' && observedResultFileId.length > 0) {
+      dependencies.patchStoryboardShotState(nodeId, shotId, (shots) => shots.map((item) => (
+        item.id === shotId
+          ? {
+            ...item,
+            videoRunId: finalSnapshot.runId,
+            videoGenStatus: 'completed',
+            videoProgress: 100,
+            videoError: undefined,
+            videoFileId: observedResultFileId,
+          }
+          : item
+      )));
       notifySuccess('生成视频完成', `镜头 ${persistedShot.order} 已生成视频。`);
       return;
     }

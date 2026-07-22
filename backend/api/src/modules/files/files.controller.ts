@@ -228,6 +228,41 @@ export class FilesController {
         return;
       }
 
+      // Use streaming for download variant (video files can be large)
+      if (variant === "download") {
+        const streamResult = await this.getFilesService().downloadFileStreamForActor(
+          authenticated,
+          fileId,
+        );
+
+        if (!streamResult) {
+          sendApiError(response, 404, 40412, "FILE_NOT_FOUND", "File not found.");
+          return;
+        }
+
+        const headers = buildResourceHeaders(streamResult);
+        const hasIfNoneMatch = splitEtags(request.headers["if-none-match"]).length > 0;
+        const isNotModified = hasIfNoneMatch
+          ? matchesIfNoneMatch(request.headers["if-none-match"], streamResult.etag)
+          : matchesIfModifiedSince(request.headers["if-modified-since"], String(headers["Last-Modified"]));
+
+        if (isNotModified) {
+          response.writeHead(304, {
+            "Cache-Control": headers["Cache-Control"],
+            "ETag": headers["ETag"],
+            "Last-Modified": headers["Last-Modified"],
+            "Vary": headers["Vary"],
+            "Access-Control-Expose-Headers": headers["Access-Control-Expose-Headers"],
+          });
+          response.end();
+          return;
+        }
+
+        response.writeHead(200, headers);
+        streamResult.stream.pipe(response);
+        return;
+      }
+
       const file = await this.getFilesService().downloadFileForActor(
         authenticated,
         fileId,

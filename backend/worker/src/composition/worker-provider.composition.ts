@@ -1,5 +1,6 @@
 import { LaozhangClient } from "../modules/providers/laozhang/laozhang.client.ts";
 import { LaozhangVeoClient } from "../modules/providers/laozhang/laozhang-veo.client.ts";
+import { createLaozhangLongTimeoutFetch } from "../modules/providers/laozhang/laozhang-long-timeout-fetch.ts";
 import { RunningHubClient } from "../modules/providers/runninghub/runninghub.client.ts";
 import { RunningHubWorkflowTemplateService } from "../modules/providers/runninghub/runninghub-workflow-template.service.ts";
 import { DbProviderConcurrencyService } from "../modules/queue/db-provider-concurrency.service.ts";
@@ -38,6 +39,7 @@ export function composeWorkerProviders(context: WorkerCompositionContext) {
     apiKey: context.env.laozhangApiKey,
     apiBaseUrl: context.env.laozhangVeoApiBaseUrl,
     snapshotDir: context.snapshotDir,
+    fetchImpl: createLaozhangLongTimeoutFetch(),
   });
   const runningHubClient = new RunningHubClient({
     apiKey: context.env.runninghubApiKey,

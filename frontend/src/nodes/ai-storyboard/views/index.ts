@@ -2,6 +2,7 @@ export { StoryboardToolbar } from './StoryboardToolbar';
 export { BatchVideoToolbar } from './BatchVideoToolbar';
 export { StoryboardMetaBar } from './StoryboardMetaBar';
 export { StoryboardInputStrip } from './StoryboardInputStrip';
+export { StoryboardStoryPanel } from './StoryboardStoryPanel';
 export { ShotTimelineView } from './ShotTimelineView';
 export { ShotListView } from './ShotListView';
 export { ShotGridView } from './ShotGridView';

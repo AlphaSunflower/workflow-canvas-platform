@@ -7,6 +7,40 @@ export interface AIStoryboardArrangeAvailability {
   referenceCount: number;
 }
 
+export interface AIStoryboardStoryArrangeAvailability {
+  enabled: boolean;
+  reason: string | null;
+}
+
+interface ResolveAIStoryboardStoryArrangeAvailabilityOptions {
+  storyText: string;
+  isGenerating?: boolean;
+}
+
+export function resolveAIStoryboardStoryArrangeAvailability(
+  options: ResolveAIStoryboardStoryArrangeAvailabilityOptions,
+): AIStoryboardStoryArrangeAvailability {
+  if (options.isGenerating) {
+    return {
+      enabled: false,
+      reason: 'AI 分镜生成进行中',
+    };
+  }
+
+  const trimmed = options.storyText.trim();
+  if (trimmed.length < 10) {
+    return {
+      enabled: false,
+      reason: '剧情文本至少需要 10 个字符',
+    };
+  }
+
+  return {
+    enabled: true,
+    reason: null,
+  };
+}
+
 export interface AIStoryboardArrangeRequestHandle {
   requestId: number;
   signal: AbortSignal;

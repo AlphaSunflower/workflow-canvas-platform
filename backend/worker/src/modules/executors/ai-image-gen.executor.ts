@@ -214,6 +214,7 @@ function buildAIImageGenInput(task: ExecutionTaskRecord): AIImageGenResolvedInpu
 export class AIImageGenTaskExecutor implements QueueTaskExecutor {
   readonly nodeType = AI_IMAGE_GEN_NODE_TYPE;
   readonly nodeTypes = [AI_IMAGE_GEN_NODE_TYPE, "aiStoryboard"] as const;
+  readonly taskTypes = ["image-gen"] as const;
 
   constructor(private readonly helper: MultiImageGenerateHelper) {}
 

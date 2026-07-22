@@ -6,7 +6,6 @@ import {
 } from '@/nodes/ai-video-gen/groups';
 import {
   AI_VIDEO_GEN_DEFAULT_MODEL,
-  AI_VIDEO_GEN_DURATION_SECONDS,
   normalizeAIVideoGenParameters,
   normalizeAIVideoGenModel,
   normalizeAIVideoGenPrompt,
@@ -148,6 +147,7 @@ export const aiVideoGenExecutionRuntimeAdapter: ExecutionRuntimeGroupedNodeAdapt
     const videoParameters = normalizeAIVideoGenParameters({
       aspectRatio: context.node.config.aspectRatio,
       resolution: context.node.config.resolutionPreset ?? context.node.config.resolution,
+      duration: context.node.config.duration,
     });
     const executableGroups = getExecutableGroups(context);
     const validation = validateAIVideoGenExecutionInput({
@@ -214,7 +214,7 @@ export const aiVideoGenExecutionRuntimeAdapter: ExecutionRuntimeGroupedNodeAdapt
       nodeTitle: context.nodeTitle,
       prompt,
       model,
-      duration: AI_VIDEO_GEN_DURATION_SECONDS,
+      duration: videoParameters.duration,
       aspectRatio: videoParameters.aspectRatio,
       resolution: videoParameters.resolution,
       size: videoParameters.size,

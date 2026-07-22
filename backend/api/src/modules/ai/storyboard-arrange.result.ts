@@ -1,4 +1,5 @@
 import type { StoryboardArrangeShotResult } from "./storyboard-arrange.dto.ts";
+import { AI_STORYBOARD_STORY_MAX_SHOTS } from "./storyboard-arrange.constants.ts";
 
 function stripCodeFence(value: string): string {
   return value
@@ -59,6 +60,16 @@ function readPrompt(input: Record<string, unknown>): string {
   return value.trim();
 }
 
+function readOptionalShotDescription(input: Record<string, unknown>): string | undefined {
+  const value = input.shotDescription;
+  if (typeof value !== "string") {
+    return undefined;
+  }
+
+  const trimmed = value.trim();
+  return trimmed.length > 0 ? trimmed : undefined;
+}
+
 export function parseStoryboardArrangeResult(
   responseText: string,
   expectedShotIds: readonly string[],
@@ -115,6 +126,67 @@ export function parseStoryboardArrangeResult(
 
   const expectedOrderSet = new Set(
     Array.from({ length: expectedShotIds.length }, (_, index) => index + 1),
+  );
+
+  results.forEach((item) => {
+    if (!expectedOrderSet.has(item.order)) {
+      throw new Error("INVALID_PROVIDER_RESULT_ORDER_RANGE");
+    }
+  });
+
+  return results.sort((left, right) => left.order - right.order);
+}
+
+export function parseStoryboardStoryArrangeResult(
+  responseText: string,
+): StoryboardArrangeShotResult[] {
+  let parsed: unknown;
+
+  try {
+    parsed = JSON.parse(extractJsonArrayText(responseText));
+  } catch {
+    throw new Error("INVALID_PROVIDER_RESULT_JSON");
+  }
+
+  if (!Array.isArray(parsed) || parsed.length === 0) {
+    throw new Error("INVALID_PROVIDER_RESULT_ARRAY");
+  }
+
+  if (parsed.length > AI_STORYBOARD_STORY_MAX_SHOTS) {
+    throw new Error("INVALID_PROVIDER_RESULT_TOO_MANY_SHOTS");
+  }
+
+  const results = parsed.map((item) => {
+    if (!isRecord(item)) {
+      throw new Error("INVALID_PROVIDER_RESULT_ITEM");
+    }
+
+    return {
+      shotId: readShotId(item),
+      order: readOrder(item),
+      prompt: readPrompt(item),
+      shotDescription: readOptionalShotDescription(item),
+    } satisfies StoryboardArrangeShotResult;
+  });
+
+  const seenShotIds = new Set<string>();
+  const seenOrders = new Set<number>();
+
+  results.forEach((item) => {
+    if (seenShotIds.has(item.shotId)) {
+      throw new Error("DUPLICATE_PROVIDER_RESULT_SHOT_ID");
+    }
+
+    if (seenOrders.has(item.order)) {
+      throw new Error("DUPLICATE_PROVIDER_RESULT_ORDER");
+    }
+
+    seenShotIds.add(item.shotId);
+    seenOrders.add(item.order);
+  });
+
+  const expectedOrderSet = new Set(
+    Array.from({ length: results.length }, (_, index) => index + 1),
   );
 
   results.forEach((item) => {

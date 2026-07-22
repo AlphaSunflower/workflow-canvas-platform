@@ -1,3 +1,4 @@
+import type { Readable } from "node:stream";
 import type {
   FileAssetResponse,
   FileRegisterRequest,
@@ -8,6 +9,15 @@ export type FileAssetStatus = "pending_upload" | "ready";
 
 export interface FileContentReadResult {
   buffer: Buffer;
+  mimeType: string;
+  byteLength: number;
+  storageKey: string;
+  blobSha256: string;
+  lastModifiedAt: string;
+}
+
+export interface FileContentStreamResult {
+  stream: Readable;
   mimeType: string;
   byteLength: number;
   storageKey: string;
@@ -117,4 +127,7 @@ export interface FilesRepository {
     fileId: string,
     variant?: FileContentVariant,
   ): Promise<FileContentReadResult | null>;
+  readFileContentStream(
+    fileId: string,
+  ): Promise<FileContentStreamResult | null>;
 }

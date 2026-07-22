@@ -1,9 +1,10 @@
 import React from 'react';
-import type { StoryboardShotData } from '@/types';
+import type { StoryboardShotData, StoryboardVideoDuration } from '@/types';
 import {
   isAIImageGenNodeParameterlessModel,
   normalizeAIImageGenNodeModel,
 } from '@/nodes/ai-image-gen/constants';
+import { AI_VIDEO_GEN_DURATION_OPTIONS } from '@/nodes/ai-video-gen/constants';
 import {
   STORYBOARD_IMAGE_MODEL_OPTIONS,
   STORYBOARD_IMAGE_SIZE_OPTIONS,
@@ -19,20 +20,31 @@ import { StoryboardStatusBadge } from './StoryboardStatusBadge';
 
 function renderCellSelect(
   value: string | undefined,
-  options: readonly string[],
+  options: readonly string[] | ReadonlyArray<{ value: string | number; label: string }>,
   onChange: (value: string) => void,
 ): React.ReactElement {
+  const isObjectOptions = options.length > 0 && typeof options[0] === 'object' && 'value' in options[0];
+  const firstValue = isObjectOptions
+    ? String((options[0] as { value: string | number }).value)
+    : options[0] as string;
+
   return (
     <select
       className="ai-storyboard-shot-table__control nodrag nopan"
-      value={value ?? options[0]}
+      value={value ?? firstValue}
       onChange={(event) => onChange(event.target.value)}
     >
-      {options.map((option) => (
-        <option key={option} value={option}>
-          {option}
-        </option>
-      ))}
+      {isObjectOptions
+        ? (options as ReadonlyArray<{ value: string | number; label: string }>).map((option) => (
+            <option key={option.value} value={String(option.value)}>
+              {option.label}
+            </option>
+          ))
+        : (options as readonly string[]).map((option) => (
+            <option key={option} value={option}>
+              {option}
+            </option>
+          ))}
     </select>
   );
 }
@@ -111,7 +123,7 @@ export const ShotTableView: React.FC<StoryboardShotCollectionViewProps> = ({
                 <td className="ai-storyboard-shot-table__params-cell">
                   <div className="ai-storyboard-shot-table__stack">
                     {renderCellSelect(shot.videoModel, STORYBOARD_VIDEO_MODEL_OPTIONS, (value) => onPatchShot(shot.id, { videoModel: value }))}
-                    {renderCellSelect(String(shot.videoDuration), ['8'], () => onPatchShot(shot.id, { videoDuration: 8 }))}
+                    {renderCellSelect(String(shot.videoDuration), AI_VIDEO_GEN_DURATION_OPTIONS, (value) => onPatchShot(shot.id, { videoDuration: Number(value) as StoryboardVideoDuration }))}
                     {renderCellSelect(shot.videoAspectRatio, STORYBOARD_VIDEO_ASPECT_RATIO_OPTIONS, (value) => onPatchShot(shot.id, { videoAspectRatio: value }))}
                     {renderCellSelect(shot.videoResolution, videoResolutionOptions, (value) => onPatchShot(shot.id, { videoResolution: value }))}
                   </div>

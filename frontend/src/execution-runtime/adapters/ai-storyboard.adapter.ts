@@ -1,18 +1,18 @@
 import type {
   FileInfo,
   NodeTaskRef,
+  StoryboardShotData,
   Workflow,
   WorkflowRelatedTaskRef,
 } from '@/types';
-import { isAINodeData, isFileNodeData } from '@/utils';
+import { isAINodeData } from '@/utils';
+import {
+  createAIStoryboardNodeActionOnlyExecutionRequest,
+} from '@/nodes/ai-storyboard/runtime';
 import {
   appendResolvedTaskOutputs,
   createRuntimeOutputSnapshot,
 } from '@/nodes/shared/runtime';
-import { AI_STORYBOARD_DEFAULT_SIZE } from '@/nodes/ai-storyboard/constants';
-import {
-  createAIStoryboardNodeActionOnlyExecutionRequest,
-} from '@/nodes/ai-storyboard/runtime';
 import {
   findMatchingStoryboardTaskRef,
   getStoryboardOutputHandleForGroupId,
@@ -29,7 +29,6 @@ import type {
   ExecutionRuntimeGroupedNodeAdapter,
   ExecutionRuntimePersistedTaskRef,
 } from '../node-execution-adapter.types';
-import { getAIStoryboardOutputHandle } from '@/nodes/ai-storyboard/groups';
 import type {
   ExecutionRuntimeGroupedNodeExecutionTarget,
   ExecutionRuntimeNodeActionOnlyExecutionPayload,
@@ -39,8 +38,6 @@ import type {
 type StoryboardMediaKind = 'image' | 'video';
 
 const groupedOutputAdapter = createGroupedExecutionOutputAdapter();
-const STORYBOARD_OUTPUT_GAP_X = 180;
-const LEGACY_STORYBOARD_OUTPUT_HANDLE = getAIStoryboardOutputHandle('group-1');
 
 function resolveStoryboardMediaKind(fileInfo?: FileInfo): StoryboardMediaKind | null {
   if (!fileInfo) {
@@ -195,43 +192,6 @@ function isStaleStoryboardOutput(
   return latestGroupTaskRef.taskId !== output.taskId;
 }
 
-function hasCommittedStoryboardOutput(
-  workflow: Workflow,
-  node: ExecutionOutputCommitStateCheckRequest['node'],
-  output: ExecutionOutputCommitStateCheckRequest['output'],
-): boolean {
-  const acceptedSourceHandles = new Set([
-    output.sourceHandle,
-    typeof output.groupId === 'string'
-      ? getStoryboardOutputHandleForGroupId(output.groupId)
-      : undefined,
-    LEGACY_STORYBOARD_OUTPUT_HANDLE,
-  ].filter((handle): handle is string => typeof handle === 'string' && handle.length > 0));
-
-  const sourceNode = workflow.nodes[node.id.value];
-  if (
-    !sourceNode
-    || !('outputs' in sourceNode)
-    || !Array.isArray(sourceNode.outputs)
-    || !sourceNode.outputs.includes(output.resultFileId)
-  ) {
-    return false;
-  }
-
-  return workflow.connections.some((connection) => {
-    if (
-      connection.type !== 'output-link'
-      || connection.sourceId !== node.id.value
-      || !acceptedSourceHandles.has(connection.sourceHandle ?? '')
-    ) {
-      return false;
-    }
-
-    const targetNode = workflow.nodes[connection.targetId];
-    return Boolean(targetNode && isFileNodeData(targetNode) && targetNode.fileId === output.resultFileId);
-  });
-}
-
 function validateStoryboardExecution(): { valid: true } {
   return { valid: true };
 }
@@ -309,66 +269,83 @@ export const aiStoryboardExecutionRuntimeAdapter: ExecutionRuntimeGroupedNodeAda
       return true;
     }
 
-    return hasCommittedStoryboardOutput(workflow, currentNode, output);
+    const shots: StoryboardShotData[] = Array.isArray(currentNode.config.shots)
+      ? currentNode.config.shots
+      : [];
+    const matchingShot = shots.find((shot: StoryboardShotData) => shot.id === output.groupId);
+    if (matchingShot) {
+      const resultFileId = typeof output.resultFileId === 'string' ? output.resultFileId.trim() : '';
+      if (resultFileId.length > 0) {
+        if (mediaKind === 'image' && matchingShot.imageFileId === resultFileId) {
+          return true;
+        }
+        if (mediaKind === 'video' && matchingShot.videoFileId === resultFileId) {
+          return true;
+        }
+      }
+    }
+
+    return false;
   },
-  commitExecutionOutputs: async ({ currentWorkflow, node, preparedOutputs, workflowAccess, appendOptions }) => {
-    const latestWorkflow = workflowAccess.getCurrentWorkflow() ?? currentWorkflow;
-    const latestNode = latestWorkflow.nodes[node.id.value];
-    if (!latestNode || !isAINodeData(latestNode) || latestNode.type !== 'aiStoryboard') {
+  commitExecutionOutputs: async (request) => {
+    const currentWorkflow = request.currentWorkflow ?? request.workflowAccess.getCurrentWorkflow();
+    if (!currentWorkflow) {
       return { changed: false };
     }
 
-    const outputsToAppend = preparedOutputs
-      .filter((item): item is typeof item & { fileInfo: NonNullable<typeof item.fileInfo> } => Boolean(item.fileInfo))
-      .map(({ output, fileInfo, runtimeResource }) => ({
-        taskId: output.taskId,
-        resultFileId: output.resultFileId,
-        groupId: output.groupId,
-        sourceHandle: output.sourceHandle,
-        fileInfo,
-        runtimeResource,
-        order: output.groupOrder * 1000,
-      }));
-
-    if (outputsToAppend.length === 0) {
-      return { changed: false };
-    }
-
-    const existingOutputCount = latestWorkflow.connections.filter((connection) => (
-      connection.type === 'output-link' && connection.sourceId === node.id.value
-    )).length;
-    const latestNodeWidth = Math.max(
-      typeof latestNode.dimensions?.width === 'number' ? latestNode.dimensions.width : 0,
-      AI_STORYBOARD_DEFAULT_SIZE.width,
-    );
-    const outputGapX = appendOptions?.gapX ?? STORYBOARD_OUTPUT_GAP_X;
-
-    const writeResult = appendResolvedTaskOutputs({
-      workflow: latestWorkflow,
-      sourceNode: latestNode,
-      resolveFileUrl: workflowAccess.resolveFileUrl,
-    }, outputsToAppend, {
-      x: appendOptions?.x ?? (latestNode.position.x + latestNodeWidth + outputGapX),
-      y: appendOptions?.y ?? latestNode.position.y,
-      gapX: outputGapX,
-      gapY: appendOptions?.gapY ?? 180,
-      columns: appendOptions?.columns ?? 1,
-      startIndex: existingOutputCount,
-      replaceExistingHandleSlot: false,
+    const videoOutputs = request.preparedOutputs.filter((item) => {
+      if (!item.fileInfo || !item.output) {
+        return false;
+      }
+      return item.output.resultFile?.fileType === 'video'
+        || item.output.resultFile?.mimeType?.startsWith('video/');
     });
+
+    if (videoOutputs.length === 0) {
+      return { changed: false };
+    }
+
+    const sourceNode = currentWorkflow.nodes[request.node.id.value];
+    if (!sourceNode || !isAINodeData(sourceNode)) {
+      return { changed: false };
+    }
+
+    const existingOutputCount = currentWorkflow.connections.filter(
+      (connection) => connection.type === 'output-link' && connection.sourceId === sourceNode.id.value,
+    ).length;
+
+    const writeResult = appendResolvedTaskOutputs(
+      {
+        workflow: currentWorkflow,
+        sourceNode,
+        resolveFileUrl: request.workflowAccess.resolveFileUrl,
+      },
+      videoOutputs.map(({ output, fileInfo }) => ({
+        fileInfo: fileInfo!,
+        runtimeResource: null,
+        sourceHandle: output!.sourceHandle,
+        order: (output!.groupOrder ?? 0) * 1000,
+      })),
+      {
+        x: sourceNode.position.x + Math.max(sourceNode.dimensions?.width ?? 0, 420) + 180,
+        y: sourceNode.position.y,
+        gapX: 180,
+        gapY: 180,
+        columns: 1,
+        startIndex: existingOutputCount,
+        replaceExistingHandleSlot: false,
+      },
+    );
 
     if (!writeResult) {
       return { changed: false };
     }
 
-    const runtimeSnapshot = createRuntimeOutputSnapshot(latestWorkflow, writeResult);
-    const nextWorkflow = workflowAccess.applyRuntimeSnapshot(runtimeSnapshot, {
+    const runtimeSnapshot = createRuntimeOutputSnapshot(currentWorkflow, writeResult);
+    request.workflowAccess.applyRuntimeSnapshot(runtimeSnapshot, {
       hydrateCanvas: true,
       hydrationReason: 'external-output',
     });
-
-    return {
-      changed: nextWorkflow !== null,
-    };
+    return { changed: true };
   },
 };

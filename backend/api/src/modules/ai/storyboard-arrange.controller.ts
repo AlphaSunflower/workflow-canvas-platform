@@ -15,8 +15,14 @@ import {
   sendForbidden,
 } from "../auth/auth.guard.ts";
 import { AuthService } from "../auth/auth.service.ts";
-import { validateStoryboardArrangeRequest } from "./storyboard-arrange.dto.ts";
-import type { StoryboardArrangeCommand } from "./storyboard-arrange.contracts.ts";
+import {
+  validateStoryboardArrangeRequest,
+  validateStoryboardStoryArrangeRequest,
+} from "./storyboard-arrange.dto.ts";
+import type {
+  StoryboardArrangeCommand,
+  StoryboardStoryArrangeCommand,
+} from "./storyboard-arrange.contracts.ts";
 import { StoryboardArrangeService } from "./storyboard-arrange.service.ts";
 
 function isExecutionError(error: unknown): error is ExecutionError {
@@ -57,6 +63,12 @@ function mapStoryboardArrangeError(error: string): {
       return { statusCode: 400, code: 40120, message: "All shot files must be images." };
     case "SHOT_IMAGE_PROCESS_FAILED":
       return { statusCode: 400, code: 40121, message: "Shot images could not be processed." };
+    case "INVALID_STORY_TEXT":
+      return { statusCode: 400, code: 40131, message: "storyText is required and must be a non-empty string." };
+    case "STORY_TEXT_TOO_LONG":
+      return { statusCode: 400, code: 40132, message: "storyText must not exceed 5000 characters." };
+    case "INVALID_CREATION_TYPE":
+      return { statusCode: 400, code: 40133, message: "creationType must be one of: architecture, product, narrative, custom." };
     case "SHOT_FILE_STORE_BUSY":
     case "FILE_STORE_LOCK_TIMEOUT":
       return { statusCode: 503, code: 50311, message: "Shot image store is busy. Try again after uploads finish." };
@@ -72,6 +84,8 @@ function mapStoryboardArrangeError(error: string): {
     case "DUPLICATE_PROVIDER_RESULT_ORDER":
     case "INVALID_PROVIDER_RESULT_ORDER_RANGE":
       return { statusCode: 502, code: 50211, message: "Storyboard arrange provider returned an invalid result." };
+    case "INVALID_PROVIDER_RESULT_TOO_MANY_SHOTS":
+      return { statusCode: 502, code: 50215, message: "Storyboard arrange provider returned too many shots." };
     default:
       return { statusCode: 500, code: 50111, message: "Storyboard arrange API internal error." };
   }
@@ -165,6 +179,32 @@ export class StoryboardArrangeController {
         ...validated,
       };
       const result = await this.getStoryboardArrangeService().arrangeShotsForActor(
+        authenticated,
+        command,
+      );
+      sendApiSuccess(response, result);
+    } catch (error) {
+      this.handleError(response, error);
+    }
+  }
+
+  async arrangeStoryboardFromStory(
+    request: IncomingMessage,
+    response: ServerResponse,
+  ): Promise<void> {
+    try {
+      const authenticated = await requireAuth(request, response, this.getAuthService());
+
+      if (!authenticated) {
+        return;
+      }
+
+      const body = await readJsonBody(request);
+      const validated = validateStoryboardStoryArrangeRequest(body);
+      const command: StoryboardStoryArrangeCommand = {
+        ...validated,
+      };
+      const result = await this.getStoryboardArrangeService().arrangeFromStory(
         authenticated,
         command,
       );

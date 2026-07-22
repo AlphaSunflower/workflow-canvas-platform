@@ -24,6 +24,7 @@ import {
   unregisterExecutionOutputNodeRuntimeSource,
 } from '../../../services/execution-output-runtime-sync';
 import { useProtectedResourceUrl } from '../../../hooks/file/useProtectedResourceUrl';
+import { httpClient } from '@/api';
 import { useImageResource } from '../../../hooks/image/useImageResource';
 import { useNodeUploadSnapshot } from '../../../hooks/workflow/useNodeUploadSnapshot';
 import { useWorkflowContext } from '../../context/useWorkflowContext';
@@ -260,14 +261,31 @@ const FileNodeInner: React.FC<FileNodeProps> = ({ data, selected, dragging = fal
   const imageResource = useImageResource(data, 'canvas', {
     enabled: canvasImageResourceEnabled,
   });
-  const previewVideoResource = useProtectedResourceUrl(shouldResolvePreviewVideo ? previewVideoUrl : undefined);
+  // For video, use token-based URL directly (same pattern as StoryboardShotPreview)
+  // instead of blob fetch — video element can't set Authorization headers,
+  // and blob fetch is slow/memory-heavy for large video files.
+  const previewVideoDirectUrl = useMemo(() => {
+    if (!shouldResolvePreviewVideo || !previewVideoUrl) return undefined;
+    const token = httpClient.getAuthToken();
+    if (!token) return previewVideoUrl;
+    const separator = previewVideoUrl.includes('?') ? '&' : '?';
+    return `${previewVideoUrl}${separator}token=${encodeURIComponent(token)}`;
+  }, [shouldResolvePreviewVideo, previewVideoUrl]);
+
+  // For video: use token-based URL directly (avoids slow blob fetch for large files).
+  // For non-video: use protected resource hook as before.
+  const previewVideoResource = useProtectedResourceUrl(
+    shouldResolvePreviewVideo && data.type !== 'video' ? previewVideoUrl : undefined,
+  );
   const imageSrc = data.type === 'image'
     ? imageResource.src
     : undefined;
   if (imageSrc) {
     lastCanvasImageSrcRef.current = imageSrc;
   }
-  const previewVideoSrc = data.type === 'video' ? previewVideoResource.resolvedUrl : undefined;
+  const previewVideoSrc = data.type === 'video'
+    ? runtimePreviewVideoUrl ?? previewVideoDirectUrl
+    : previewVideoResource.resolvedUrl;
   const canvasRequestDebug = data.type === 'image' ? imageResource.debug : undefined;
   const shouldMountViewerLayer = renderTier === 'full' || isPreviewModalOpen || isImageViewerOpen;
   const suppressImageDomPreview = data.type === 'image' &&
@@ -303,6 +321,10 @@ const FileNodeInner: React.FC<FileNodeProps> = ({ data, selected, dragging = fal
     data.status === 'pending' ||
     (data.type !== 'image' && data.status === 'processing' && !hasRenderablePreview);
   const isImportError = data.status === 'error' || previewState?.status === 'error';
+  const isVideoSyncing = data.type === 'video'
+    && data.source?.type === 'node-output'
+    && !runtimePreviewVideoUrl
+    && data.status !== 'error';
   const imagePreviewDisplay = data.type !== 'image'
     ? 'empty'
     : suppressImageRasterOwnedPreview
@@ -807,10 +829,19 @@ const FileNodeInner: React.FC<FileNodeProps> = ({ data, selected, dragging = fal
 
   const handleVideoError = useCallback(() => {
     setVideoReady(false);
+    // Don't permanently mark as error if runtime resource sync is still in progress.
+    // The blob URL will arrive later via subscription and the video will retry.
+    if (data.source?.type === 'node-output') {
+      const runtimeResource = getExecutionOutputRuntimeResource(data.fileId);
+      if (!runtimeResource) {
+        log.debug('handleVideoError', `Video load failed but runtime sync in progress, waiting: ${data.fileName}`);
+        return;
+      }
+    }
     updateCurrentNodeLocal({ status: 'error' });
     persistCurrentNodePatch({ status: 'error' });
     log.warn('handleVideoError', `Failed to load video: ${data.fileName}`);
-  }, [data.fileName, persistCurrentNodePatch, updateCurrentNodeLocal]);
+  }, [data.fileName, data.fileId, data.source?.type, persistCurrentNodePatch, updateCurrentNodeLocal]);
 
   const handleVideoLoadedMetadata = useCallback((event: React.SyntheticEvent<HTMLVideoElement>): void => {
     const { videoWidth, videoHeight, duration } = event.currentTarget;
@@ -1041,6 +1072,7 @@ const FileNodeInner: React.FC<FileNodeProps> = ({ data, selected, dragging = fal
           isInteractionActive={isInteractionActive}
           isImportPlaceholder={isImportPlaceholder}
           isImportError={isImportError}
+          isVideoSyncing={isVideoSyncing}
           imagePreviewDisplay={imagePreviewDisplay}
           hasRenderablePreview={hasRenderablePreview}
           isCanvasImageReady={isCanvasImageReady}

@@ -58,6 +58,7 @@ function buildAIVideoGenInput(task: ExecutionTaskRecord): {
   const videoParameters = normalizeAIVideoGenParameters({
     aspectRatio: taskInput.aspectRatio,
     resolution: taskInput.resolution,
+    duration,
   });
   const referenceFileIds = normalizeReferenceFileIds(taskInput.referenceFileIds);
 
@@ -87,6 +88,7 @@ function buildAIVideoGenInput(task: ExecutionTaskRecord): {
 export class AIVideoGenTaskExecutor implements QueueTaskExecutor {
   readonly nodeType = AI_VIDEO_GEN_NODE_TYPE;
   readonly nodeTypes = [AI_VIDEO_GEN_NODE_TYPE, "aiStoryboard"] as const;
+  readonly taskTypes = ["video-gen"] as const;
 
   constructor(
     private readonly helper: VideoGenerateHelper,

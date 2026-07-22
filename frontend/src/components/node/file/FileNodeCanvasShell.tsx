@@ -26,6 +26,7 @@ interface FileNodeCanvasShellProps {
   isInteractionActive: boolean;
   isImportPlaceholder: boolean;
   isImportError: boolean;
+  isVideoSyncing?: boolean;
   imagePreviewDisplay: ReturnType<typeof resolveImageNodePreviewDisplay>;
   hasRenderablePreview: boolean;
   isCanvasImageReady: boolean;
@@ -94,6 +95,7 @@ export const FileNodeCanvasShell = memo<FileNodeCanvasShellProps>(({
   isInteractionActive,
   isImportPlaceholder,
   isImportError,
+  isVideoSyncing,
   imagePreviewDisplay,
   hasRenderablePreview,
   isCanvasImageReady,
@@ -123,7 +125,7 @@ export const FileNodeCanvasShell = memo<FileNodeCanvasShellProps>(({
   const wrapperClasses = ['node-wrapper', 'file-node', selected ? 'selected' : '', data.status === 'processing' && !isImportPlaceholder ? 'processing' : '']
     .concat(isInteractionActive ? 'file-node--active' : '')
     .concat(isImportPlaceholder ? 'file-node--placeholder' : '')
-    .concat(isImportError ? 'file-node--error' : '')
+    .concat(isImportError && !isVideoSyncing ? 'file-node--error' : '')
     .concat(imagePreviewDisplay === 'viewport-hidden' ? 'file-node--viewport-hidden' : '')
     .concat(isCompactTier ? 'file-node--compact' : '')
     .concat(isMinimalTier ? 'file-node--minimal' : '')
@@ -212,7 +214,7 @@ export const FileNodeCanvasShell = memo<FileNodeCanvasShellProps>(({
       return tierPreview;
     }
 
-    if (isImportError) {
+    if (isImportError && !isVideoSyncing) {
       return <div className="file-node__placeholder file-node__placeholder--error"><span className="file-node__placeholder-icon">!</span></div>;
     }
 
@@ -221,6 +223,9 @@ export const FileNodeCanvasShell = memo<FileNodeCanvasShellProps>(({
     }
 
     if (!previewVideoSrc) {
+      if (isVideoSyncing) {
+        return renderImagePlaceholder('loading', nodeIcon);
+      }
       return <div className="file-node__placeholder"><span className="file-node__placeholder-icon">{nodeIcon}</span></div>;
     }
 
@@ -264,7 +269,7 @@ export const FileNodeCanvasShell = memo<FileNodeCanvasShellProps>(({
       return tierPreview;
     }
 
-    if (isImportError) {
+    if (isImportError && !isVideoSyncing) {
       return <div className="file-node__placeholder file-node__placeholder--error"><span className="file-node__placeholder-icon">!</span></div>;
     }
 

@@ -95,11 +95,29 @@ const storyboardBatchVideoAction: NodeActionDefinition = {
   },
 };
 
+const storyboardStoryArrangeAction: NodeActionDefinition = {
+  id: 'story-arrange',
+  label: 'Generate Storyboard from Story',
+  run: async (context) => {
+    const storyText = typeof context.options.storyText === 'string' ? context.options.storyText : '';
+    const creationType = typeof context.options.creationType === 'string' ? context.options.creationType : 'custom';
+    await resolveStoryboardServices(context).runStoryArrange(
+      context.node.id.value,
+      storyText,
+      creationType as 'architecture' | 'product' | 'narrative' | 'custom',
+      {
+        signal: context.options.signal,
+      },
+    );
+  },
+};
+
 export const aiStoryboardNodeActions: NodeDefinition['actions'] = [
   storyboardArrangeAction,
   storyboardShotImageAction,
   storyboardShotVideoAction,
   storyboardBatchVideoAction,
+  storyboardStoryArrangeAction,
 ];
 
 export function getAIStoryboardActionIds(): string[] {

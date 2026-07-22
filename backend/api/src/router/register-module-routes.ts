@@ -135,6 +135,12 @@ export function registerModuleRoutes(
     },
     {
       method: "POST",
+      pattern: "/api/v1/ai/storyboard-arrange-story",
+      handler: ({ request, response }) =>
+        controllers.storyboardArrangeController.arrangeStoryboardFromStory(request, response),
+    },
+    {
+      method: "POST",
       pattern: "/api/v1/files/register",
       handler: ({ request, response }) => controllers.filesController.register(request, response),
     },

@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
 import { Handle, Position } from 'reactflow';
-import type { StoryboardShotData } from '@/types';
+import type { StoryboardShotData, StoryboardVideoDuration } from '@/types';
 import {
   isAIImageGenNodeParameterlessModel,
   normalizeAIImageGenNodeModel,
 } from '@/nodes/ai-image-gen/constants';
+import { AI_VIDEO_GEN_DURATION_OPTIONS } from '@/nodes/ai-video-gen/constants';
 import { getAIStoryboardShotOutputHandle } from '../groups';
 import { resolveAIStoryboardShotImageAvailability } from '../shot-image-execution';
 import { resolveAIStoryboardShotVideoAvailability } from '../shot-video-execution';
@@ -35,22 +36,33 @@ export interface StoryboardShotTimelineViewProps {
 function renderSelectField(
   label: string,
   value: string | undefined,
-  options: readonly string[],
+  options: readonly string[] | ReadonlyArray<{ value: string | number; label: string }>,
   onChange: (value: string) => void,
 ): React.ReactElement {
+  const isObjectOptions = options.length > 0 && typeof options[0] === 'object' && 'value' in options[0];
+  const firstValue = isObjectOptions
+    ? String((options[0] as { value: string | number }).value)
+    : options[0] as string;
+
   return (
     <label className="ai-storyboard-shot-field">
       <span className="ai-storyboard-shot-field__label">{label}</span>
       <select
         className="ai-storyboard-shot-field__control nodrag nopan"
-        value={value ?? options[0]}
+        value={value ?? firstValue}
         onChange={(event) => onChange(event.target.value)}
       >
-        {options.map((option) => (
-          <option key={option} value={option}>
-            {option}
-          </option>
-        ))}
+        {isObjectOptions
+          ? (options as ReadonlyArray<{ value: string | number; label: string }>).map((option) => (
+              <option key={option.value} value={String(option.value)}>
+                {option.label}
+              </option>
+            ))
+          : (options as readonly string[]).map((option) => (
+              <option key={option} value={option}>
+                {option}
+              </option>
+            ))}
       </select>
     </label>
   );
@@ -122,9 +134,11 @@ export const ShotTimelineView: React.FC<StoryboardShotTimelineViewProps> = ({
             <div className="ai-storyboard-shot-row__preview">
               <StoryboardShotPreview
                 src={preview?.url}
+                fallbackSrc={preview?.fallbackUrl}
                 sourceNode={preview?.sourceNode}
                 alt={preview?.label ?? `Shot ${shot.order}`}
                 className="storyboard-shot-card__image ai-storyboard-shot-preview__image"
+                mediaType={preview?.mediaType}
                 fallback={(
                   <div className="ai-storyboard-shot-preview__fallback">
                     无预览
@@ -169,7 +183,7 @@ export const ShotTimelineView: React.FC<StoryboardShotTimelineViewProps> = ({
                   </div>
                   <div className="ai-storyboard-shot-row__advanced-group">
                     {renderSelectField('视频模型', shot.videoModel, STORYBOARD_VIDEO_MODEL_OPTIONS, (value) => onPatchShot(shot.id, { videoModel: value }))}
-                    {renderSelectField('时长', String(shot.videoDuration), ['8'], () => onPatchShot(shot.id, { videoDuration: 8 }))}
+                    {renderSelectField('时长', String(shot.videoDuration), AI_VIDEO_GEN_DURATION_OPTIONS, (value) => onPatchShot(shot.id, { videoDuration: Number(value) as StoryboardVideoDuration }))}
                     {renderSelectField('视频比例', shot.videoAspectRatio, STORYBOARD_VIDEO_ASPECT_RATIO_OPTIONS, (value) => onPatchShot(shot.id, { videoAspectRatio: value }))}
                     {renderSelectField('视频分辨率', shot.videoResolution, videoResolutionOptions, (value) => onPatchShot(shot.id, { videoResolution: value }))}
                   </div>
@@ -184,7 +198,7 @@ export const ShotTimelineView: React.FC<StoryboardShotTimelineViewProps> = ({
                 onClick={() => onGenerateShotImage(shot.id)}
                 disabled={!imageAvailability.enabled}
               >
-                {shot.imageGenStatus === 'generating' ? '出图中' : '出图'}
+                {shot.imageGenStatus === 'generating' ? '出图中' : shot.imageFileId ? '重新出图' : '出图'}
               </button>
               <button
                 type="button"

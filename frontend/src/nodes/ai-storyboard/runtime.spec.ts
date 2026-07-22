@@ -82,6 +82,7 @@ test('aiStoryboard runtime exposes node-action-only execution contract', () => {
     'shot-image',
     'shot-video',
     'batch-video',
+    'story-arrange',
   ]);
 });
 
@@ -90,7 +91,7 @@ test('aiStoryboard runtime builds a formal node-action-only execution request', 
 
   assert.deepEqual(request, {
     boundary: NODE_ACTION_ONLY_EXECUTION_MODE,
-    actionIds: ['arrange', 'shot-image', 'shot-video', 'batch-video'],
+    actionIds: ['arrange', 'shot-image', 'shot-video', 'batch-video', 'story-arrange'],
     plan: {
       files: [],
       references: [],
@@ -174,6 +175,17 @@ test('aiStoryboard runtime accepts services resolved from the storyboard facade'
           model: 'stub-model',
           referenceCount: 0,
           promptVersion: 'v1',
+          mode: 'image' as const,
+        },
+      }),
+      arrangeStoryboardFromStory: async () => ({
+        success: true,
+        data: {
+          shots: [],
+          model: 'stub-model',
+          referenceCount: 0,
+          promptVersion: 'v1',
+          mode: 'story' as const,
         },
       }),
       getExecutionRuntimeGroupState: () => null,
@@ -220,6 +232,17 @@ test('aiStoryboard runtime accepts services resolved from the storyboard facade'
               model: 'stub-model',
               referenceCount: 0,
               promptVersion: 'v1',
+              mode: 'image' as const,
+            },
+          }),
+          arrangeStoryboardFromStory: async () => ({
+            success: true,
+            data: {
+              shots: [],
+              model: 'stub-model',
+              referenceCount: 0,
+              promptVersion: 'v1',
+              mode: 'story' as const,
             },
           }),
           getExecutionRuntimeGroupState: () => null,

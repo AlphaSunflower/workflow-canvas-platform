@@ -38,6 +38,7 @@ import type {
 import type {
   AIVideoGenAcceptedModel,
   AIVideoGenSupportedAspectRatio,
+  AIVideoGenSupportedDurationSeconds,
   AIVideoGenSupportedResolution,
   AIVideoGenSupportedSize,
   AI_VIDEO_GEN_EXECUTION_MODE,
@@ -214,7 +215,7 @@ export interface AIVideoGenCreateExecutionRequest {
   nodeTitle?: string;
   prompt: string;
   model: AIVideoGenAcceptedModel;
-  duration: 8;
+  duration: AIVideoGenSupportedDurationSeconds;
   aspectRatio?: AIVideoGenSupportedAspectRatio;
   resolution?: AIVideoGenSupportedResolution;
   size?: AIVideoGenSupportedSize;

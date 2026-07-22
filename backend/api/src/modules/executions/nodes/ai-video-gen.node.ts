@@ -9,6 +9,7 @@ import {
   AI_VIDEO_GEN_TASK_TYPE,
   EXECUTION_MODES,
   NODE_TASK_TYPES,
+  normalizeAIVideoGenDuration,
   normalizeAIVideoGenParameters,
   normalizeAIVideoGenModel,
 } from "@newworkflow/backend-shared";
@@ -147,13 +148,15 @@ ExecutionNodeDefinition<AIVideoGenCreateExecutionRequest> = {
       throw new Error("INVALID_MODEL");
     }
 
-    if (request.duration !== AI_VIDEO_GEN_DEFAULT_DURATION_SECONDS) {
+    const duration = normalizeAIVideoGenDuration(request.duration);
+    if (duration === null) {
       throw new Error("INVALID_DURATION");
     }
 
     const videoParameters = normalizeAIVideoGenParameters({
       aspectRatio: request.aspectRatio,
       resolution: request.resolution,
+      duration,
     });
     if (!videoParameters) {
       throw new Error("INVALID_VIDEO_PARAMETERS");
@@ -174,7 +177,7 @@ ExecutionNodeDefinition<AIVideoGenCreateExecutionRequest> = {
       nodeTitle: normalizeOptionalString(request.nodeTitle),
       prompt,
       model,
-      duration: AI_VIDEO_GEN_DEFAULT_DURATION_SECONDS,
+      duration,
       aspectRatio: videoParameters.aspectRatio,
       resolution: videoParameters.resolution,
       size: videoParameters.size,

@@ -7,13 +7,17 @@ import type {
   Dimensions,
   FileNodeData,
   StoryboardConfig,
+  StoryboardCreationType,
   StoryboardShotData,
+  StoryboardVideoDuration,
   StoryboardViewMode,
 } from '@/types';
 import { NodeExecutionStatus } from '@/components/execution/NodeExecutionStatus';
 import { NodeErrorBoundary } from '@/components/ui/ErrorBoundary';
 import { NODE_TYPE_INFO } from '@/constants';
 import { useNodeRuntimeBindings } from '@/nodes/runtime-bindings';
+import { useWorkflowActions } from '@/components/context/useWorkflowActions';
+import { workflowTaskHistoryService } from '@/services/workflow-task-history.service';
 import { createWorkflowRuntimeSnapshot } from '@/utils';
 import { useGroupedDropInteraction } from '../shared/grouped-drop/useGroupedDropInteraction';
 import {
@@ -31,9 +35,10 @@ import {
   isStoryboardLocalStateEqual,
   mergeStoryboardShotsFromInputs,
 } from './shot-sync';
-import { resolveStoryboardGeneratedImagePreviewUrl } from './preview';
+import { resolveStoryboardGeneratedImageFallbackUrl, resolveStoryboardGeneratedImagePreviewUrl } from './preview';
 import {
   createStoryboardLocalStateKey,
+  normalizeStoryboardCreationType,
   normalizeStoryboardShotImageConfig,
   normalizeStoryboardShotVideoConfig,
   getStoryboardShotDefaults,
@@ -44,6 +49,7 @@ import { patchNodeConfigInGraph } from '../shared/node-config-updater';
 import {
   AIStoryboardArrangeRequestController,
   resolveAIStoryboardArrangeAvailability,
+  resolveAIStoryboardStoryArrangeAvailability,
 } from './arrange';
 import {
   AIStoryboardShotImageRequestController,
@@ -61,6 +67,7 @@ import {
 import {
   BatchVideoToolbar,
   ShotTimelineView,
+  StoryboardStoryPanel,
   type StoryboardShotTimelineViewProps,
   type StoryboardShotImagePreview,
 } from './views';
@@ -233,7 +240,9 @@ const AIStoryboardNodeInner: React.FC<AIStoryboardNodeProps> = ({
     selectors,
     runtime,
     nodeExecutionRuntime,
+    workflowId,
   } = useNodeRuntimeBindings();
+  const workflowActions = useWorkflowActions();
   const { getNodes, getEdges, getViewport, setNodes, setEdges } = useReactFlow<AnyNodeData>();
   const updateNodeInternals = useUpdateNodeInternals();
   const nodeInfo = NODE_TYPE_INFO[data.type];
@@ -275,8 +284,14 @@ const AIStoryboardNodeInner: React.FC<AIStoryboardNodeProps> = ({
   const [batchSettingsOpen, setBatchSettingsOpen] = useState(false);
   const [isArranging, setIsArranging] = useState(false);
   const [isResizing, setIsResizing] = useState(false);
+  const [storyMode, setStoryMode] = useState(false);
+  const [storyText, setStoryText] = useState('');
+  const [creationType, setCreationType] = useState<StoryboardCreationType>(
+    normalizeStoryboardCreationType(data.config.creationType) ?? 'custom',
+  );
+  const [isStoryGenerating, setIsStoryGenerating] = useState(false);
   const [batchVideoModel, setBatchVideoModel] = useState(normalizedBatchVideoConfig.videoModel);
-  const [batchVideoDuration, setBatchVideoDuration] = useState<8>(storyboardDefaults.defaultVideoDuration);
+  const [batchVideoDuration, setBatchVideoDuration] = useState<StoryboardVideoDuration>(storyboardDefaults.defaultVideoDuration);
   const [batchVideoAspectRatio, setBatchVideoAspectRatio] = useState(normalizedBatchVideoConfig.videoAspectRatio);
   const [batchVideoResolution, setBatchVideoResolution] = useState(normalizedBatchVideoConfig.videoResolution);
   const wrapperRef = useRef<HTMLDivElement | null>(null);
@@ -306,6 +321,13 @@ const AIStoryboardNodeInner: React.FC<AIStoryboardNodeProps> = ({
       isArranging,
     })
   ), [isArranging, storyboardState.shots]);
+
+  const storyArrangeAvailability = useMemo(() => (
+    resolveAIStoryboardStoryArrangeAvailability({
+      storyText,
+      isGenerating: isStoryGenerating,
+    })
+  ), [storyText, isStoryGenerating]);
 
   const writeStoryboardStateToNode = useCallback((nextState: StoryboardLocalState): void => {
     const graphWriteResult = writeStoryboardLocalStateToNodeGraph({
@@ -509,8 +531,13 @@ const AIStoryboardNodeInner: React.FC<AIStoryboardNodeProps> = ({
   }, [writeStoryboardStateToNode]);
 
   const patchShot = useCallback((shotId: string, patch: Partial<StoryboardShotData>): void => {
+    const latestNode = selectors.getNodeById(data.id.value);
+    const latestShots = (latestNode && latestNode.type === 'aiStoryboard' && Array.isArray(latestNode.config.shots))
+      ? latestNode.config.shots as StoryboardShotData[]
+      : storyboardState.shots;
+
     const nextShots = reorderStoryboardShots(
-      storyboardState.shots.map((shot) => {
+      latestShots.map((shot) => {
         if (shot.id !== shotId) {
           return shot;
         }
@@ -549,7 +576,7 @@ const AIStoryboardNodeInner: React.FC<AIStoryboardNodeProps> = ({
       ...storyboardState,
       shots: nextShots,
     });
-  }, [commitStoryboardState, storyboardDefaults, storyboardState]);
+  }, [commitStoryboardState, data.id.value, selectors, storyboardDefaults, storyboardState]);
 
   const deleteShot = useCallback((shotId: string): void => {
     const nextShots = reorderStoryboardShots(
@@ -705,6 +732,42 @@ const AIStoryboardNodeInner: React.FC<AIStoryboardNodeProps> = ({
     data.id.value,
   ]);
 
+  const generateStoryShots = useCallback(async (): Promise<void> => {
+    if (!storyArrangeAvailability.enabled) {
+      return;
+    }
+
+    const requestHandle = arrangeRequestControllerRef.current.start();
+    setIsStoryGenerating(true);
+
+    try {
+      await actions.runNodeAction({
+        nodeId: data.id.value,
+        actionId: 'story-arrange',
+        options: {
+          signal: requestHandle.signal,
+          storyText,
+          creationType,
+        },
+      });
+    } finally {
+      if (arrangeRequestControllerRef.current.finish(requestHandle.requestId)) {
+        setIsStoryGenerating(false);
+      }
+    }
+  }, [
+    actions,
+    storyArrangeAvailability.enabled,
+    data.id.value,
+    storyText,
+    creationType,
+  ]);
+
+  const handleCreationTypeChange = useCallback((value: StoryboardCreationType): void => {
+    setCreationType(value);
+    updateNodeConfigFields({ creationType: value });
+  }, [updateNodeConfigFields]);
+
   const generateShotImage = useCallback(async (shotId: string): Promise<void> => {
     const targetShot = storyboardState.shots.find((shot) => shot.id === shotId);
     if (!targetShot) {
@@ -725,6 +788,16 @@ const AIStoryboardNodeInner: React.FC<AIStoryboardNodeProps> = ({
     shotImageRequestControllersRef.current.set(shotId, controller);
 
     const requestHandle = controller.start();
+
+    // For re-generation: clear the old imageFileId so the runner generates a fresh image
+    if (targetShot.imageFileId) {
+      patchShot(shotId, {
+        imageFileId: undefined,
+        imageGenStatus: 'idle',
+        imageGenMessage: undefined,
+      });
+    }
+
     patchShot(shotId, {
       imageGenStatus: 'generating',
       imageGenMessage: '任务创建中',
@@ -739,6 +812,44 @@ const AIStoryboardNodeInner: React.FC<AIStoryboardNodeProps> = ({
           signal: requestHandle.signal,
         },
       });
+
+      setTimeout(() => {
+        // Read latest shot from workflowRef.current (updated by runner's patchStoryboardShotRuntimeState).
+        // Use patchCurrentWorkflow as a read-only pass-through to access the current workflow.
+        let latestShotWithImage: StoryboardShotData | undefined;
+        workflowActions.patchCurrentWorkflow((current) => {
+          const currentNode = current.nodes[data.id.value];
+          if (currentNode && currentNode.type === 'aiStoryboard') {
+            const config = currentNode.config as StoryboardConfig;
+            latestShotWithImage = Array.isArray(config.shots)
+              ? config.shots.find((s) => s.id === shotId) as StoryboardShotData | undefined
+              : undefined;
+          }
+          return current;
+        });
+
+        if (latestShotWithImage) {
+          // Commit to BOTH ReactFlow store (setNodes) and workflow state (syncRuntimeSnapshot).
+          // This ensures data.config has imageFileId when the externalStoryboardState effect fires.
+          const nextState: StoryboardLocalState = {
+            ...storyboardState,
+            shots: storyboardState.shots.map((s) => (
+              s.id === shotId
+                ? {
+                  ...s,
+                  imageGenStatus: latestShotWithImage!.imageGenStatus ?? 'completed',
+                  imageGenMessage: latestShotWithImage!.imageGenMessage,
+                  videoGenStatus: latestShotWithImage!.videoGenStatus ?? 'idle',
+                  ...(latestShotWithImage!.imageFileId ? { imageFileId: latestShotWithImage!.imageFileId } : {}),
+                }
+                : s
+            )),
+          };
+          commitStoryboardState(nextState);
+        }
+        // Persist to backend
+        void workflowActions.saveWorkflow({ force: true, silent: true }).catch(() => {});
+      }, 0);
     } finally {
       if (controller.finish(requestHandle.requestId)) {
         shotImageRequestControllersRef.current.delete(shotId);
@@ -746,10 +857,12 @@ const AIStoryboardNodeInner: React.FC<AIStoryboardNodeProps> = ({
     }
   }, [
     actions,
+    commitStoryboardState,
     data.id.value,
     patchShot,
     runtime.notification,
-    storyboardState.shots,
+    storyboardState,
+    workflowActions,
   ]);
 
   const generateShotVideo = useCallback(async (shotId: string): Promise<void> => {
@@ -787,6 +900,43 @@ const AIStoryboardNodeInner: React.FC<AIStoryboardNodeProps> = ({
           signal: requestHandle.signal,
         },
       });
+
+      setTimeout(() => {
+        // Read latest shot from workflowRef.current (updated by runner's patchStoryboardShotRuntimeState).
+        let latestShotWithVideo: StoryboardShotData | undefined;
+        workflowActions.patchCurrentWorkflow((current) => {
+          const currentNode = current.nodes[data.id.value];
+          if (currentNode && currentNode.type === 'aiStoryboard') {
+            const config = currentNode.config as StoryboardConfig;
+            latestShotWithVideo = Array.isArray(config.shots)
+              ? config.shots.find((s) => s.id === shotId) as StoryboardShotData | undefined
+              : undefined;
+          }
+          return current;
+        });
+
+        if (latestShotWithVideo) {
+          // Commit to BOTH ReactFlow store and workflow state.
+          const nextState: StoryboardLocalState = {
+            ...storyboardState,
+            shots: storyboardState.shots.map((s) => (
+              s.id === shotId
+                ? {
+                  ...s,
+                  imageGenStatus: latestShotWithVideo!.imageGenStatus ?? 'idle',
+                  videoGenStatus: latestShotWithVideo!.videoGenStatus ?? 'completed',
+                  videoProgress: latestShotWithVideo!.videoProgress,
+                  videoError: latestShotWithVideo!.videoError,
+                  ...(latestShotWithVideo!.videoFileId ? { videoFileId: latestShotWithVideo!.videoFileId } : {}),
+                }
+                : s
+            )),
+          };
+          commitStoryboardState(nextState);
+        }
+        // Persist to backend
+        void workflowActions.saveWorkflow({ force: true, silent: true }).catch(() => {});
+      }, 0);
     } finally {
       if (controller.finish(requestHandle.requestId)) {
         shotVideoRequestControllersRef.current.delete(shotId);
@@ -794,10 +944,12 @@ const AIStoryboardNodeInner: React.FC<AIStoryboardNodeProps> = ({
     }
   }, [
     actions,
+    commitStoryboardState,
     data.id.value,
     patchShot,
     runtime.notification,
-    storyboardState.shots,
+    storyboardState,
+    workflowActions,
   ]);
 
   const shotPreviewMap = useMemo(() => {
@@ -806,6 +958,9 @@ const AIStoryboardNodeInner: React.FC<AIStoryboardNodeProps> = ({
     storyboardState.shots.forEach((shot) => {
       const sourceNode = findInputImageByShot(shot, resolvedInputImages);
       const sourceUrl = resolveStoryboardGeneratedImagePreviewUrl(shot);
+      const fallbackUrl = resolveStoryboardGeneratedImageFallbackUrl(shot);
+      const hasImageFile = typeof shot.imageFileId === 'string' && shot.imageFileId.trim().length > 0;
+      const hasVideoFile = typeof shot.videoFileId === 'string' && shot.videoFileId.trim().length > 0;
       const sourceLabel = sourceNode?.fileName
         ?? shot.imageFileId
         ?? shot.sourceImageFileId
@@ -814,8 +969,10 @@ const AIStoryboardNodeInner: React.FC<AIStoryboardNodeProps> = ({
 
       previewMap.set(shot.id, {
         url: sourceUrl,
+        fallbackUrl,
         label: sourceLabel,
         sourceNode,
+        mediaType: hasImageFile ? 'image' : hasVideoFile ? 'video' : undefined,
       });
     });
 
@@ -962,6 +1119,92 @@ const AIStoryboardNodeInner: React.FC<AIStoryboardNodeProps> = ({
     storyboardState,
   ]);
 
+  // Heartbeat: poll backend for completed image-gen/video-gen tasks to recover imageFileId/videoFileId.
+  // This handles: (1) page refresh where imageFileId wasn't persisted, (2) runner state sync failures.
+  useEffect(() => {
+    if (!workflowId) return;
+
+    let cancelled = false;
+    let intervalId: ReturnType<typeof setInterval> | undefined;
+
+    const pollCompletedTasks = async (): Promise<void> => {
+      // Poll image-gen tasks
+      try {
+        const response = await workflowTaskHistoryService.listWorkflowTasks(
+          workflowId,
+          { nodeId: data.id.value, taskType: 'image-gen', status: 'completed', pageSize: 100 },
+        );
+        if (cancelled) return;
+
+        let hasUpdates = false;
+        const nextShots = storyboardState.shots.map((shot) => {
+          if (shot.imageFileId) return shot;
+          const matchingTask = response.items.find((t) => t.groupId === shot.id && t.resultFileId);
+          if (!matchingTask) return shot;
+          hasUpdates = true;
+          return {
+            ...shot,
+            imageFileId: matchingTask.resultFileId ?? undefined,
+            imageGenStatus: 'completed' as const,
+            imageGenMessage: '已完成',
+          };
+        });
+
+        if (hasUpdates) {
+          commitStoryboardState({ ...storyboardState, shots: nextShots });
+          void workflowActions.saveWorkflow({ force: true, silent: true }).catch(() => {});
+        }
+      } catch {
+        // silent — will retry on next interval
+      }
+
+      // Poll video-gen tasks
+      try {
+        const response = await workflowTaskHistoryService.listWorkflowTasks(
+          workflowId,
+          { nodeId: data.id.value, taskType: 'video-gen', status: 'completed', pageSize: 100 },
+        );
+        if (cancelled) return;
+
+        let hasUpdates = false;
+        const nextShots = storyboardState.shots.map((shot) => {
+          if (shot.videoFileId) return shot;
+          const matchingTask = response.items.find((t) => t.groupId === shot.id && t.resultFileId);
+          if (!matchingTask) return shot;
+          hasUpdates = true;
+          return {
+            ...shot,
+            videoFileId: matchingTask.resultFileId ?? undefined,
+            videoGenStatus: 'completed' as const,
+          };
+        });
+
+        if (hasUpdates) {
+          commitStoryboardState({ ...storyboardState, shots: nextShots });
+          void workflowActions.saveWorkflow({ force: true, silent: true }).catch(() => {});
+        }
+      } catch {
+        // silent
+      }
+    };
+
+    // Initial poll on mount
+    void pollCompletedTasks();
+
+    // Set up 5s interval while any shot is generating
+    const hasGeneratingShots = storyboardState.shots.some(
+      (s) => s.imageGenStatus === 'generating' || s.videoGenStatus === 'generating',
+    );
+    if (hasGeneratingShots) {
+      intervalId = setInterval(() => { void pollCompletedTasks(); }, 5000);
+    }
+
+    return () => {
+      cancelled = true;
+      if (intervalId) clearInterval(intervalId);
+    };
+  }, [workflowId, data.id.value, storyboardState, commitStoryboardState, workflowActions]);
+
   useEffect(() => () => {
     arrangeRequestControllerRef.current.cancel();
   }, []);
@@ -1076,8 +1319,15 @@ const AIStoryboardNodeInner: React.FC<AIStoryboardNodeProps> = ({
               <div className="ai-storyboard-primary-toolbar">
                 <button
                   type="button"
+                  className={`ai-storyboard-workbench__button nodrag nopan${storyMode ? ' ai-storyboard-workbench__button--active' : ''}`}
+                  onClick={() => setStoryMode((mode) => !mode)}
+                >
+                  {storyMode ? '退出剧情模式' : '剧情模式'}
+                </button>
+                <button
+                  type="button"
                   className="ai-storyboard-workbench__button ai-storyboard-workbench__button--accent nodrag nopan"
-                  disabled={!arrangeAvailability.enabled}
+                  disabled={!arrangeAvailability.enabled || storyMode}
                   onClick={() => {
                     void arrangeShots();
                   }}
@@ -1113,9 +1363,26 @@ const AIStoryboardNodeInner: React.FC<AIStoryboardNodeProps> = ({
                 </button>
               </div>
 
-              {!arrangeAvailability.enabled ? (
+              {!arrangeAvailability.enabled && !storyMode ? (
                 <div className="ai-storyboard-node__hint">
                   {arrangeAvailability.reason}
+                </div>
+              ) : null}
+
+              {storyMode ? (
+                <div className="ai-storyboard-node__section ai-storyboard-node__section--story">
+                  <StoryboardStoryPanel
+                    storyText={storyText}
+                    creationType={creationType}
+                    isGenerating={isStoryGenerating}
+                    generateDisabled={!storyArrangeAvailability.enabled}
+                    generateDisabledReason={storyArrangeAvailability.reason}
+                    onStoryTextChange={setStoryText}
+                    onCreationTypeChange={handleCreationTypeChange}
+                    onGenerate={() => {
+                      void generateStoryShots();
+                    }}
+                  />
                 </div>
               ) : null}
             </div>

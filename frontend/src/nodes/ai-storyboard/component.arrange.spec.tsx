@@ -87,12 +87,14 @@ test('storyboard arrange stays on the formal node contract instead of a placehol
     'shot-image',
     'shot-video',
     'batch-video',
+    'story-arrange',
   ]);
   assert.deepEqual(getAIStoryboardActionIds(), [
     'arrange',
     'shot-image',
     'shot-video',
     'batch-video',
+    'story-arrange',
   ]);
   assert.equal(aiStoryboardExecution.mode, 'node-action-only');
   assert.equal(aiStoryboardExecution.canRun({} as never, []).valid, true);

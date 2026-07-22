@@ -42,6 +42,7 @@ export const ShotGridView: React.FC<StoryboardShotCollectionViewProps> = ({
               <div className="ai-storyboard-shot-grid-card__image-wrap">
                 <StoryboardShotPreview
                   src={preview?.url}
+                  fallbackSrc={preview?.fallbackUrl}
                   sourceNode={preview?.sourceNode}
                   alt={preview?.label ?? `Shot ${shot.order}`}
                   className="storyboard-shot-card__image ai-storyboard-shot-preview__image"

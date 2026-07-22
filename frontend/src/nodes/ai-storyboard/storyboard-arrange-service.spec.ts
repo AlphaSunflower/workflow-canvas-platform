@@ -182,6 +182,7 @@ test('runStoryboardArrange resolves arrangeable shots and applies returned order
           model: 'gemini',
           referenceCount: 2,
           promptVersion: 'v1',
+          mode: 'image' as const,
         },
       };
     },

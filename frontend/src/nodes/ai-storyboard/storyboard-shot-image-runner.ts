@@ -339,6 +339,9 @@ export async function runStoryboardShotImage(
         : item
     )));
 
+    let lastPendingCommit: Promise<void> | undefined;
+    let observedResultFileId: string | undefined;
+
     const finalSnapshot = await dependencies.startExecutionPolling({
       runId: execution.runId,
       workflowId: persistedWorkflow.id,
@@ -348,6 +351,10 @@ export async function runStoryboardShotImage(
         const snapshotTask = snapshot.tasks.find((item) => item.groupId === shotId) ?? snapshot.tasks[0];
         if (!snapshotTask) {
           return;
+        }
+
+        if (typeof snapshotTask.resultFileId === 'string' && snapshotTask.resultFileId.length > 0) {
+          observedResultFileId = snapshotTask.resultFileId;
         }
 
         dependencies.setStoryboardNodeExecutionState(nodeId, {
@@ -390,7 +397,7 @@ export async function runStoryboardShotImage(
           error: snapshotTask.error ?? undefined,
         });
 
-        void dependencies.commitBackendExecutionOutputs(
+        lastPendingCommit = dependencies.commitBackendExecutionOutputs(
           persistedNode,
           snapshot,
           dependencies.createOutputCommitInput(
@@ -399,24 +406,15 @@ export async function runStoryboardShotImage(
           ),
         );
 
-        dependencies.patchStoryboardShotState(nodeId, shotId, (shots) => shots.map((item) => (
-          item.id === shotId
-            ? {
-              ...item,
-              imageGenRunId: snapshot.runId,
-              imageGenStatus: snapshotTask.status === 'completed'
-                ? 'completed'
-                : snapshotTask.status === 'failed'
-                  ? 'failed'
-                  : 'generating',
-              imageGenMessage: snapshotTask.error
-                ?? snapshotTask.message
-                ?? undefined,
-            }
-            : item
-        )));
+        // Note: Don't set imageGenStatus/imageFileId here to avoid race condition
+        // with commitBackendExecutionOutputs. The final state is set in the
+        // post-polling success path below.
       },
     });
+
+    if (lastPendingCommit) {
+      await lastPendingCommit;
+    }
 
     const finalTask = finalSnapshot.tasks.find((item) => item.groupId === shotId) ?? finalSnapshot.tasks[0];
     if (!finalTask) {
@@ -437,14 +435,39 @@ export async function runStoryboardShotImage(
           ? {
             ...item,
             imageGenRunId: finalSnapshot.runId,
-            imageGenStatus: 'completed',
+            imageGenStatus: 'completed' as const,
             imageGenMessage: finalTask.message ?? '已完成',
+            imageFileId: finalTask.resultFileId ?? undefined,
           }
           : item
       )));
 
       dependencies.notification.showSuccess('AI 出图完成', `镜头 ${persistedShot.order} 已生成新图片。`);
       return;
+    }
+
+    if (finalTask.status === 'completed') {
+      const committedState = dependencies.getCommittedStoryboardGroupState(nodeId, shotId, {
+        workflowId: persistedWorkflow.id,
+        runId: finalSnapshot.runId,
+        taskId: finalTask.taskId,
+        fileType: 'image',
+      });
+      if (committedState) {
+        dependencies.patchStoryboardShotState(nodeId, shotId, (shots) => shots.map((item) => (
+          item.id === shotId
+            ? {
+              ...item,
+              imageGenRunId: finalSnapshot.runId,
+              imageGenStatus: 'completed',
+              imageGenMessage: '已完成',
+              ...(typeof committedState.resultFileId === 'string' ? { imageFileId: committedState.resultFileId } : {}),
+            }
+            : item
+        )));
+        dependencies.notification.showSuccess('AI 出图完成', `镜头 ${persistedShot.order} 已生成新图片。`);
+        return;
+      }
     }
 
     if (dependencies.getCommittedStoryboardGroupState(nodeId, shotId, {
@@ -461,9 +484,28 @@ export async function runStoryboardShotImage(
             imageGenRunId: finalSnapshot.runId,
             imageGenStatus: 'completed',
             imageGenMessage: undefined,
+            ...(typeof finalTask.resultFileId === 'string' ? { imageFileId: finalTask.resultFileId } : {}),
           }
           : item
       )));
+      return;
+    }
+
+    // Recovery: if we observed a resultFileId during polling (worker set it before crashing),
+    // treat the task as completed even though the backend task status is still 'processing'.
+    if (typeof observedResultFileId === 'string' && observedResultFileId.length > 0) {
+      dependencies.patchStoryboardShotState(nodeId, shotId, (shots) => shots.map((item) => (
+        item.id === shotId
+          ? {
+            ...item,
+            imageGenRunId: finalSnapshot.runId,
+            imageGenStatus: 'completed',
+            imageGenMessage: '已完成',
+            imageFileId: observedResultFileId,
+          }
+          : item
+      )));
+      dependencies.notification.showSuccess('AI 出图完成', `镜头 ${persistedShot.order} 已生成新图片。`);
       return;
     }
 

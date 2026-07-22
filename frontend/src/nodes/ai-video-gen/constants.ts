@@ -1,7 +1,9 @@
 export const AI_VIDEO_GEN_FAST_MODEL = 'veo-3.1-fast-generate-preview' as const;
 export const AI_VIDEO_GEN_QUALITY_MODEL = 'veo-3.1-generate-preview' as const;
 export const AI_VIDEO_GEN_DEFAULT_MODEL = AI_VIDEO_GEN_FAST_MODEL;
-export const AI_VIDEO_GEN_DURATION_SECONDS = 8 as const;
+export const AI_VIDEO_GEN_DEFAULT_DURATION_SECONDS = 8 as const;
+export const AI_VIDEO_GEN_SUPPORTED_DURATIONS_SECONDS = [4, 6, 8] as const;
+export type AIVideoGenSupportedDurationSeconds = typeof AI_VIDEO_GEN_SUPPORTED_DURATIONS_SECONDS[number];
 export const AI_VIDEO_GEN_PROVIDER = 'laozhang-veo' as const;
 export const AI_VIDEO_GEN_DEFAULT_ASPECT_RATIO = '16:9' as const;
 export const AI_VIDEO_GEN_DEFAULT_RESOLUTION = '720p' as const;
@@ -15,6 +17,12 @@ export const AI_VIDEO_GEN_SUPPORTED_MODELS = [
 export const AI_VIDEO_GEN_MODEL_OPTIONS = [
   { value: AI_VIDEO_GEN_FAST_MODEL, label: 'Veo 3.1 Fast' },
   { value: AI_VIDEO_GEN_QUALITY_MODEL, label: 'Veo 3.1 Quality' },
+] as const;
+
+export const AI_VIDEO_GEN_DURATION_OPTIONS = [
+  { value: 4, label: '4s' },
+  { value: 6, label: '6s' },
+  { value: 8, label: '8s' },
 ] as const;
 
 export const AI_VIDEO_GEN_SUPPORTED_ASPECT_RATIOS = [
@@ -99,8 +107,15 @@ export function normalizeAIVideoGenModel(value: unknown): AIVideoGenSupportedMod
   return AI_VIDEO_GEN_LEGACY_MODEL_MAP[normalized as keyof typeof AI_VIDEO_GEN_LEGACY_MODEL_MAP] ?? null;
 }
 
-export function normalizeAIVideoGenDuration(value: unknown): typeof AI_VIDEO_GEN_DURATION_SECONDS | null {
-  return value === AI_VIDEO_GEN_DURATION_SECONDS ? AI_VIDEO_GEN_DURATION_SECONDS : null;
+export function normalizeAIVideoGenDuration(value: unknown): AIVideoGenSupportedDurationSeconds | null {
+  if (typeof value !== 'number' || !Number.isFinite(value)) {
+    return null;
+  }
+
+  const truncated = Math.trunc(value);
+  return (AI_VIDEO_GEN_SUPPORTED_DURATIONS_SECONDS as readonly number[]).includes(truncated)
+    ? (truncated as AIVideoGenSupportedDurationSeconds)
+    : null;
 }
 
 export function normalizeAIVideoGenAspectRatio(value: unknown): AIVideoGenSupportedAspectRatio | null {
@@ -138,13 +153,16 @@ export function resolveAIVideoGenSize(input: {
 export function normalizeAIVideoGenParameters(input: {
   aspectRatio?: unknown;
   resolution?: unknown;
+  duration?: unknown;
 }): {
   aspectRatio: AIVideoGenSupportedAspectRatio;
   resolution: AIVideoGenSupportedResolution;
   size: AIVideoGenSupportedSize;
+  duration: AIVideoGenSupportedDurationSeconds;
 } {
   const requestedResolution = normalizeAIVideoGenResolution(input.resolution) ?? AI_VIDEO_GEN_DEFAULT_RESOLUTION;
   const requestedAspectRatio = normalizeAIVideoGenAspectRatio(input.aspectRatio) ?? AI_VIDEO_GEN_DEFAULT_ASPECT_RATIO;
+  const duration = normalizeAIVideoGenDuration(input.duration) ?? AI_VIDEO_GEN_DEFAULT_DURATION_SECONDS;
   const aspectRatio = requestedResolution === '4k' ? '16:9' : requestedAspectRatio;
   const size =
     resolveAIVideoGenSize({ aspectRatio, resolution: requestedResolution })
@@ -154,6 +172,7 @@ export function normalizeAIVideoGenParameters(input: {
     aspectRatio,
     resolution: requestedResolution,
     size,
+    duration,
   };
 }
 

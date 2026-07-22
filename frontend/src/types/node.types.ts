@@ -209,7 +209,7 @@ export interface StoryboardPersistedShotData {
   imageAspectRatio: string;
   imageSize: string;
   videoModel: string;
-  videoDuration: 8;
+  videoDuration: StoryboardVideoDuration;
   videoAspectRatio?: string;
   videoResolution?: string;
   /**
@@ -237,14 +237,18 @@ export interface StoryboardShotRuntimeState {
 
 export type StoryboardShotData = StoryboardPersistedShotData & StoryboardShotRuntimeState;
 
+export type StoryboardCreationType = 'architecture' | 'product' | 'narrative' | 'custom';
+export type StoryboardVideoDuration = 4 | 6 | 8;
+
 export interface StoryboardConfig extends AIConfig {
   shots: StoryboardPersistedShotData[];
   viewMode: StoryboardViewMode;
+  creationType?: StoryboardCreationType;
   defaultImageModel: string;
   defaultImageAspectRatio: string;
   defaultImageSize: string;
   batchVideoModel: string;
-  batchVideoDuration: 8;
+  batchVideoDuration: StoryboardVideoDuration;
   batchVideoAspectRatio: string;
   batchVideoResolution: string;
   processedInputFileIds: string[];

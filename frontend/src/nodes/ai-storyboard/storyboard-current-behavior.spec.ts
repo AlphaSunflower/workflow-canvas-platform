@@ -488,7 +488,7 @@ test('current adapter extracts image and video outputs onto the storyboard shot 
   assert.equal(videoOutputs[0]?.groupOrder, shot.order);
 });
 
-test('current adapter commits each storyboard output as a distinct right-side file node', async () => {
+test('current adapter does not create canvas file nodes for storyboard outputs', async () => {
   let workflow = createStoryboardWorkflow();
   const node = workflow.nodes[STORYBOARD_NODE_ID] as AINodeData;
   const shot = (node.config.shots as StoryboardShotData[])[0];
@@ -497,7 +497,7 @@ test('current adapter commits each storyboard output as a distinct right-side fi
   const commitSnapshot = async (
     snapshot: ExecutionRuntimeRunState,
     mediaKind: 'image' | 'video',
-  ): Promise<void> => {
+  ): Promise<{ changed: boolean }> => {
     const outputs = aiStoryboardExecutionRuntimeAdapter.extractExecutionOutputs(snapshot, {
       workflowId: workflow.id,
       nodeId: STORYBOARD_NODE_ID,
@@ -510,7 +510,7 @@ test('current adapter commits each storyboard output as a distinct right-side fi
       throw new Error('Expected storyboard output');
     }
 
-    await aiStoryboardExecutionRuntimeAdapter.commitExecutionOutputs?.({
+    const result = await aiStoryboardExecutionRuntimeAdapter.commitExecutionOutputs?.({
       workflowId: workflow.id,
       runId: snapshot.runId,
       node,
@@ -550,45 +550,33 @@ test('current adapter commits each storyboard output as a distinct right-side fi
         runtimeResource: null,
       }],
     });
+
+    return result ?? { changed: false };
   };
 
-  await commitSnapshot(
+  // Image outputs: no-op (displayed in shot preview, not as canvas file nodes)
+  const imageResult = await commitSnapshot(
     createRunSnapshot({ fileType: 'image', resultFileId: 'storyboard-image-result' }),
     'image',
   );
-  await commitSnapshot(
+  assert.deepEqual(imageResult, { changed: false });
+
+  // Video outputs: creates file nodes on the canvas connected to the output handle
+  const videoResult = await commitSnapshot(
     createRunSnapshot({ fileType: 'video', resultFileId: 'storyboard-video-result' }),
     'video',
   );
+  assert.deepEqual(videoResult, { changed: true });
 
-  const sourceNode = workflow.nodes[STORYBOARD_NODE_ID] as AINodeData;
+  // Verify video file node was created, but image was not
   const outputNodes = Object.values(workflow.nodes).filter((candidate) => (
     'fileId' in candidate
     && (candidate.fileId === 'storyboard-image-result' || candidate.fileId === 'storyboard-video-result')
   ));
-  const outputLinks = workflow.connections.filter((connection) => (
-    connection.type === 'output-link'
-    && connection.sourceId === STORYBOARD_NODE_ID
-    && connection.sourceHandle === getAIStoryboardShotOutputHandle(shot.id)
-  ));
+  const outputLinks = workflow.connections.filter((connection) => connection.type === 'output-link');
 
-  assert.deepEqual(sourceNode.outputs, ['storyboard-image-result', 'storyboard-video-result']);
-  assert.equal(outputNodes.length, 2);
-  assert.equal(outputLinks.length, 2);
-  const orderedOutputNodes = outputNodes
-    .slice()
-    .sort((left, right) => left.position.y - right.position.y);
-  assert.equal(
-    outputNodes.every((outputNode) => outputNode.position.x > sourceNode.position.x + sourceNode.dimensions.width),
-    true,
-  );
-  assert.equal(
-    orderedOutputNodes.every((outputNode) => outputNode.position.y === orderedOutputNodes[0]?.position.y),
-    true,
-  );
-  assert.equal(orderedOutputNodes[0]?.position.x, sourceNode.position.x + sourceNode.dimensions.width + 180);
-  assert.equal(orderedOutputNodes[0]?.position.y, sourceNode.position.y);
-  assert.equal(orderedOutputNodes[1]?.position.x > orderedOutputNodes[0]?.position.x, true);
+  assert.equal(outputNodes.length, 1, 'should create a file node for video only');
+  assert.equal(outputLinks.length, 1, 'should create an output-link connection for video only');
 });
 
 test('current committed-state check treats stale storyboard snapshots as already handled', async () => {

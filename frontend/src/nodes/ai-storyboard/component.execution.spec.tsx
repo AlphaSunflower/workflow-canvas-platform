@@ -143,12 +143,14 @@ test('storyboard definition exposes a formal node-action-only execution contract
     'shot-image',
     'shot-video',
     'batch-video',
+    'story-arrange',
   ]);
   assert.deepEqual(getAIStoryboardActionIds(), [
     'arrange',
     'shot-image',
     'shot-video',
     'batch-video',
+    'story-arrange',
   ]);
   assert.equal(aiStoryboardExecution.mode, NODE_ACTION_ONLY_EXECUTION_MODE);
   assert.equal(aiStoryboardExecution.taskType, 'video-gen');
@@ -159,7 +161,7 @@ test('storyboard definition exposes a formal node-action-only execution contract
   expectContains(definitionSource, /execution:\s*aiStoryboardExecution/);
   assert.deepEqual(createAIStoryboardNodeActionOnlyExecutionRequest(), {
     boundary: NODE_ACTION_ONLY_EXECUTION_MODE,
-    actionIds: ['arrange', 'shot-image', 'shot-video', 'batch-video'],
+    actionIds: ['arrange', 'shot-image', 'shot-video', 'batch-video', 'story-arrange'],
     plan: {
       files: [],
       references: [],
@@ -179,6 +181,9 @@ test('storyboard node actions forward target ids and options through the public 
   const services = {
     arrange: async (nodeId: string): Promise<void> => {
       calls.push({ actionId: 'arrange', nodeId });
+    },
+    runStoryArrange: async (nodeId: string, storyText: string, creationType: string): Promise<void> => {
+      calls.push({ actionId: 'story-arrange', nodeId, targetId: `${storyText}:${creationType}` });
     },
     runShotImage: async (nodeId: string, targetId: string): Promise<void> => {
       calls.push({ actionId: 'shot-image', nodeId, targetId });
@@ -221,6 +226,7 @@ test('storyboard node actions forward target ids and options through the public 
       suppressNotifications: true,
     },
     { actionId: 'batch-video', nodeId: node.id.value },
+    { actionId: 'story-arrange', nodeId: node.id.value, targetId: ':custom' },
   ]);
 });
 
@@ -228,6 +234,7 @@ test('runNodeAction rejects unknown storyboard shot targets before runner logic 
   const { workflow, node } = createStoryboardWorkflow();
   const services = {
     arrange: async (): Promise<void> => undefined,
+    runStoryArrange: async (): Promise<void> => undefined,
     runShotImage: async (): Promise<void> => undefined,
     runShotVideo: async (): Promise<void> => undefined,
     runBatchVideo: async (): Promise<void> => undefined,
@@ -260,6 +267,7 @@ test('storyboard service registry resolves a facade-shaped service surface for a
   }) as Record<string, unknown>;
 
   assert.equal(typeof resolved.arrange, 'function');
+  assert.equal(typeof resolved.runStoryArrange, 'function');
   assert.equal(typeof resolved.runShotImage, 'function');
   assert.equal(typeof resolved.runShotVideo, 'function');
   assert.equal(typeof resolved.runBatchVideo, 'function');

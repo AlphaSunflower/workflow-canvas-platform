@@ -11,8 +11,26 @@ export const AI_VIDEO_GEN_PROMPT_VERSION = "v1" as const;
 
 export const AI_VIDEO_GEN_DEFAULT_DURATION_SECONDS = 8 as const;
 export const AI_VIDEO_GEN_SUPPORTED_DURATIONS_SECONDS = [
+  4,
+  6,
   AI_VIDEO_GEN_DEFAULT_DURATION_SECONDS,
 ] as const;
+
+export type AIVideoGenSupportedDurationSeconds =
+  (typeof AI_VIDEO_GEN_SUPPORTED_DURATIONS_SECONDS)[number];
+
+export function normalizeAIVideoGenDuration(
+  value: unknown,
+): AIVideoGenSupportedDurationSeconds | null {
+  if (typeof value !== "number" || !Number.isFinite(value)) {
+    return null;
+  }
+
+  const truncated = Math.trunc(value);
+  return (AI_VIDEO_GEN_SUPPORTED_DURATIONS_SECONDS as readonly number[]).includes(truncated)
+    ? (truncated as AIVideoGenSupportedDurationSeconds)
+    : null;
+}
 
 export const AI_VIDEO_GEN_DEFAULT_ASPECT_RATIO = "16:9" as const;
 export const AI_VIDEO_GEN_DEFAULT_RESOLUTION = "720p" as const;
@@ -155,10 +173,12 @@ export function resolveAIVideoGenSize(
 export function normalizeAIVideoGenParameters(input: {
   aspectRatio?: unknown;
   resolution?: unknown;
+  duration?: unknown;
 }): {
   aspectRatio: AIVideoGenSupportedAspectRatio;
   resolution: AIVideoGenSupportedResolution;
   size: AIVideoGenSupportedSize;
+  duration: AIVideoGenSupportedDurationSeconds;
   metadata?: string;
 } | null {
   const aspectRatio =
@@ -167,6 +187,9 @@ export function normalizeAIVideoGenParameters(input: {
   const resolution =
     normalizeAIVideoGenResolution(input.resolution)
     ?? AI_VIDEO_GEN_DEFAULT_RESOLUTION;
+  const duration =
+    normalizeAIVideoGenDuration(input.duration)
+    ?? AI_VIDEO_GEN_DEFAULT_DURATION_SECONDS;
   const size = resolveAIVideoGenSize({ aspectRatio, resolution });
 
   if (!size) {
@@ -177,8 +200,9 @@ export function normalizeAIVideoGenParameters(input: {
     aspectRatio,
     resolution,
     size,
+    duration,
     metadata: JSON.stringify({
-      durationSeconds: AI_VIDEO_GEN_DEFAULT_DURATION_SECONDS,
+      durationSeconds: duration,
       resolution,
       aspectRatio,
     }),

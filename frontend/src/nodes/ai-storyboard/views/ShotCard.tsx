@@ -1,9 +1,10 @@
 import React from 'react';
-import type { StoryboardShotData } from '@/types';
+import type { StoryboardShotData, StoryboardVideoDuration } from '@/types';
 import {
   isAIImageGenNodeParameterlessModel,
   normalizeAIImageGenNodeModel,
 } from '@/nodes/ai-image-gen/constants';
+import { AI_VIDEO_GEN_DURATION_OPTIONS } from '@/nodes/ai-video-gen/constants';
 import { resolveAIStoryboardShotImageAvailability } from '../shot-image-execution';
 import { resolveAIStoryboardShotVideoAvailability } from '../shot-video-execution';
 import { StoryboardShotPreview } from './StoryboardShotPreview';
@@ -34,22 +35,33 @@ const VIDEO_ASPECT_RATIO_OPTIONS = STORYBOARD_VIDEO_ASPECT_RATIO_OPTIONS;
 function renderSelectField(
   label: string,
   value: string | undefined,
-  options: readonly string[],
+  options: readonly string[] | ReadonlyArray<{ value: string | number; label: string }>,
   onChange: (value: string) => void,
 ): React.ReactElement {
+  const isObjectOptions = options.length > 0 && typeof options[0] === 'object' && 'value' in options[0];
+  const firstValue = isObjectOptions
+    ? String((options[0] as { value: string | number }).value)
+    : options[0] as string;
+
   return (
     <label className="ai-storyboard-shot-field">
       <span className="ai-storyboard-shot-field__label">{label}</span>
       <select
         className="ai-storyboard-shot-field__control nodrag nopan"
-        value={value ?? options[0]}
+        value={value ?? firstValue}
         onChange={(event) => onChange(event.target.value)}
       >
-        {options.map((option) => (
-          <option key={option} value={option}>
-            {option}
-          </option>
-        ))}
+        {isObjectOptions
+          ? (options as ReadonlyArray<{ value: string | number; label: string }>).map((option) => (
+              <option key={option.value} value={String(option.value)}>
+                {option.label}
+              </option>
+            ))
+          : (options as readonly string[]).map((option) => (
+              <option key={option} value={option}>
+                {option}
+              </option>
+            ))}
       </select>
     </label>
   );
@@ -79,9 +91,11 @@ export const ShotCard: React.FC<ShotCardProps> = ({
         <div className="ai-storyboard-shot-preview">
           <StoryboardShotPreview
             src={preview?.url}
+            fallbackSrc={preview?.fallbackUrl}
             sourceNode={preview?.sourceNode}
             alt={preview?.label ?? `Shot ${shot.order}`}
             className="storyboard-shot-card__image ai-storyboard-shot-preview__image"
+            mediaType={preview?.mediaType}
             fallback={(
               <div className="ai-storyboard-shot-preview__fallback">
                 No image
@@ -174,7 +188,7 @@ export const ShotCard: React.FC<ShotCardProps> = ({
 
         <div className="ai-storyboard-shot-field-grid ai-storyboard-shot-field-grid--video">
           {renderSelectField('Video model', shot.videoModel, STORYBOARD_VIDEO_MODEL_OPTIONS, (value) => onPatch(shot.id, { videoModel: value }))}
-          {renderSelectField('Duration', String(shot.videoDuration), ['8'], () => onPatch(shot.id, { videoDuration: 8 }))}
+          {renderSelectField('Duration', String(shot.videoDuration), AI_VIDEO_GEN_DURATION_OPTIONS, (value) => onPatch(shot.id, { videoDuration: Number(value) as StoryboardVideoDuration }))}
           {renderSelectField('Video aspect ratio', shot.videoAspectRatio, VIDEO_ASPECT_RATIO_OPTIONS, (value) => onPatch(shot.id, { videoAspectRatio: value }))}
           {renderSelectField('Video resolution', shot.videoResolution, videoResolutionOptions, (value) => onPatch(shot.id, { videoResolution: value }))}
         </div>

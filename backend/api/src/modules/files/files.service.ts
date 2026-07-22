@@ -38,7 +38,7 @@ function getVariantCacheControl(variant: FileContentVariant): string {
   }
 }
 
-function buildResourceEtag(fileId: string, variant: FileContentVariant, resource: FileContentReadResult): string {
+function buildResourceEtag(fileId: string, variant: FileContentVariant, resource: { blobSha256: string }): string {
   return `"${fileId}:${variant}:${resource.blobSha256}"`;
 }
 
@@ -187,6 +187,33 @@ export class FilesService {
       ...resource,
       cacheControl: getVariantCacheControl(variant),
       etag: buildResourceEtag(fileId, variant, resource),
+    };
+  }
+
+  async downloadFileStreamForActor(
+    authenticated: AuthenticatedAccount,
+    fileId: string,
+  ): Promise<(FileResourceResponse & { stream: import("node:stream").Readable }) | null> {
+    const fileRecord = await this.repository.findFileRecordById(fileId);
+
+    if (!fileRecord) {
+      return null;
+    }
+
+    if (!canAccessOwnedResource(authenticated, fileRecord.userId)) {
+      throw new Error("FILE_ACCESS_FORBIDDEN");
+    }
+
+    const resource = await this.repository.readFileContentStream(fileId);
+    if (!resource) {
+      return null;
+    }
+
+    return {
+      ...resource,
+      buffer: Buffer.alloc(0),
+      cacheControl: getVariantCacheControl("download"),
+      etag: buildResourceEtag(fileId, "download", resource),
     };
   }
 }

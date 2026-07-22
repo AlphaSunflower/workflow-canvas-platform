@@ -10,7 +10,9 @@ import type { SharedNodeActionServices } from '../shared/node-action-service-reg
 import { patchStoryboardShotRuntimeState } from './storyboard-state-service';
 import {
   applyStoryboardArrangeToWorkflow,
+  applyStoryboardStoryResultToWorkflow,
   runStoryboardArrange,
+  runStoryboardStoryArrange,
 } from './storyboard-arrange-service';
 import { runStoryboardShotImage } from './storyboard-shot-image-runner';
 import { runStoryboardShotVideo } from './storyboard-shot-video-runner';
@@ -34,11 +36,29 @@ export interface StoryboardActionFacadeDependencies extends SharedNodeActionServ
     },
     options?: { signal?: AbortSignal },
   ) => Promise<Awaited<ReturnType<typeof aiStoryboardApi.arrangeStoryboardShots>>>;
+  arrangeStoryboardFromStory: (
+    request: {
+      workflowId: string;
+      nodeId: string;
+      nodeType: 'aiStoryboard';
+      storyText: string;
+      creationType: 'architecture' | 'product' | 'narrative' | 'custom';
+    },
+    options?: { signal?: AbortSignal },
+  ) => Promise<Awaited<ReturnType<typeof aiStoryboardApi.arrangeStoryboardFromStory>>>;
 }
 
 export interface StoryboardActionFacade {
   arrange: (
     nodeId: string,
+    options?: {
+      signal?: AbortSignal;
+    },
+  ) => Promise<void>;
+  runStoryArrange: (
+    nodeId: string,
+    storyText: string,
+    creationType: 'architecture' | 'product' | 'narrative' | 'custom',
     options?: {
       signal?: AbortSignal;
     },
@@ -92,6 +112,7 @@ export function createStoryboardActionFacadeDependencies(
   return {
     ...services,
     arrangeStoryboardShots: aiStoryboardApi.arrangeStoryboardShots,
+    arrangeStoryboardFromStory: aiStoryboardApi.arrangeStoryboardFromStory,
   };
 }
 
@@ -180,6 +201,37 @@ export function createStoryboardActionFacade(
         arrangeStoryboardShots: dependencies.arrangeStoryboardShots,
         getBackendFileInfo: dependencies.getBackendFileInfo,
         ensureBackendFileId: dependencies.ensureBackendFileId,
+        notification: dependencies.notification,
+      }, options);
+    },
+    runStoryArrange: async (nodeId, storyText, creationType, options): Promise<void> => {
+      await runStoryboardStoryArrange(nodeId, storyText, creationType, {
+        auth: dependencies.auth,
+        getNodeNameById: dependencies.getNodeNameById,
+        getNodeById: dependencies.getNodeById,
+        getCurrentWorkflow: dependencies.getCurrentWorkflow,
+        applyStoryboardStoryResult: (targetNodeId, arrangedShots) => {
+          const nextWorkflow = applyStoryboardStoryResultToWorkflow(
+            dependencies.getCurrentWorkflow(),
+            targetNodeId,
+            arrangedShots,
+          );
+          if (!nextWorkflow) {
+            return false;
+          }
+
+          dependencies.applyRuntimeSnapshot({
+            nodes: nextWorkflow.nodes,
+            connections: nextWorkflow.connections,
+            viewport: nextWorkflow.viewport,
+            metadata: nextWorkflow.metadata ?? undefined,
+          }, {
+            hydrateCanvas: true,
+            hydrationReason: 'external-output',
+          });
+          return true;
+        },
+        arrangeStoryboardFromStory: dependencies.arrangeStoryboardFromStory,
         notification: dependencies.notification,
       }, options);
     },

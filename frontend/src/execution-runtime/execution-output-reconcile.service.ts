@@ -2,7 +2,7 @@ import type { WorkflowRuntimeSnapshot, WorkflowRuntimeSyncOptions } from '@/cont
 import type { AINodeData, FileNodeData, Workflow } from '@/types';
 import { isAINodeData, isFileNodeData } from '@/utils';
 import { getExecutionRuntimeNodeAdapter } from './node-execution-adapter.registry';
-import { executionOutputCommitService } from './execution-output-commit.service';
+import { executionOutputCommitService, type ExecutionOutputCommitService } from './execution-output-commit.service';
 import type { ExecutionOutputCommitWorkflowAccess } from './execution-output-commit.types';
 import type {
   ExecutionRuntimePersistedTaskRef,
@@ -414,6 +414,7 @@ export async function reconcileExecutionOutputs(params: {
     runtime: WorkflowRuntimeSnapshot,
     options?: WorkflowRuntimeSyncOptions,
   ) => Workflow | null;
+  commitService?: ExecutionOutputCommitService;
 }): Promise<boolean> {
   const adapter = getExecutionRuntimeNodeAdapter(params.node.type);
   if (!adapter) {
@@ -460,9 +461,10 @@ export async function reconcileExecutionOutputs(params: {
     resolveFileUrl: params.resolveFileUrl,
   };
   const reconcileMode = 'incremental' as const;
+  const commitService = params.commitService ?? executionOutputCommitService;
 
   const result = adapter.executionKind === 'grouped'
-    ? await executionOutputCommitService.commit<unknown, ExecutionRuntimeGroupedNodeExecutionTarget>({
+    ? await commitService.commit<unknown, ExecutionRuntimeGroupedNodeExecutionTarget>({
       workflowId: params.workflow.id,
       runId: params.snapshot.runId,
       node: params.node,
@@ -481,7 +483,7 @@ export async function reconcileExecutionOutputs(params: {
       workflowAccess,
       mode: reconcileMode,
     })
-    : await executionOutputCommitService.commit<unknown, ExecutionRuntimeSingleNodeExecutionTarget>({
+    : await commitService.commit<unknown, ExecutionRuntimeSingleNodeExecutionTarget>({
       workflowId: params.workflow.id,
       runId: params.snapshot.runId,
       node: params.node,

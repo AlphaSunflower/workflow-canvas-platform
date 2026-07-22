@@ -1,7 +1,10 @@
 import {
   AI_STORYBOARD_ARRANGE_IMAGE_INFO_TEXT_TEMPLATE,
   buildStoryboardArrangeUserPrompt,
+  buildStoryboardStorySystemPrompt,
+  buildStoryboardStoryUserPrompt,
 } from "./storyboard-arrange.constants.ts";
+import type { StoryboardCreationType } from "./storyboard-arrange.constants.ts";
 import type {
   LaozhangVisionChatMessage,
   LaozhangVisionMessageContentPart,
@@ -43,6 +46,22 @@ export function buildStoryboardArrangeMessages(input: {
     {
       role: "user",
       content,
+    },
+  ];
+}
+
+export function buildStoryboardStoryMessages(input: {
+  storyText: string;
+  creationType: StoryboardCreationType;
+}): LaozhangVisionChatMessage[] {
+  return [
+    {
+      role: "system",
+      content: buildStoryboardStorySystemPrompt(input.creationType),
+    },
+    {
+      role: "user",
+      content: buildStoryboardStoryUserPrompt(input.storyText, input.creationType),
     },
   ];
 }

@@ -17,6 +17,19 @@ function getAuthorizationHeader(request: IncomingMessage): string | undefined {
     : request.headers.authorization;
 }
 
+function getAuthorizationFromQuery(request: IncomingMessage): string | undefined {
+  const url = request.url;
+  if (!url) return undefined;
+
+  try {
+    const parsed = new URL(url, "http://localhost");
+    const token = parsed.searchParams.get("token");
+    return token ? `Bearer ${token}` : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
 function isUnauthorizedError(errorCode: string): boolean {
   return [
     "AUTHORIZATION_REQUIRED",
@@ -65,9 +78,8 @@ export async function requireAuth(
   }
 
   try {
-    const authenticated = await authService.authenticateAccessToken(
-      getAuthorizationHeader(request),
-    );
+    const authHeader = getAuthorizationHeader(request) ?? getAuthorizationFromQuery(request);
+    const authenticated = await authService.authenticateAccessToken(authHeader);
     setCurrentUserContext(request, authenticated);
     return authenticated;
   } catch (error) {

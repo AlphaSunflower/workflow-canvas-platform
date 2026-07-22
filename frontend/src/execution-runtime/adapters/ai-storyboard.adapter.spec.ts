@@ -1,12 +1,11 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
-import type { Workflow, AINodeData, FileInfo, FileNodeData, StoryboardShotData } from '@/types';
-import { createDefaultAINodeData, createDefaultFileNodeData, createSequentialNodeId } from '@/utils/node/create';
+import type { Workflow, AINodeData, FileInfo, StoryboardShotData } from '@/types';
+import { createDefaultAINodeData, createSequentialNodeId } from '@/utils/node/create';
 import type { ExecutionRuntimeRunState } from '../execution-runtime.types';
 import { aiStoryboardExecutionRuntimeAdapter } from './ai-storyboard.adapter';
 import {
-  getAIStoryboardOutputHandle,
   getAIStoryboardShotOutputHandle,
 } from '@/nodes/ai-storyboard/groups';
 import { AI_STORYBOARD_DEFAULT_SIZE } from '@/nodes/ai-storyboard/constants';
@@ -225,7 +224,7 @@ test('aiStoryboard adapter exposes a node-action-only payload instead of throwin
   assert.deepEqual(payload.targets, []);
   assert.deepEqual(payload.request, {
     boundary: 'node-action-only',
-    actionIds: ['arrange', 'shot-image', 'shot-video', 'batch-video'],
+    actionIds: ['arrange', 'shot-image', 'shot-video', 'batch-video', 'story-arrange'],
     plan: {
       files: [],
       references: [],
@@ -363,34 +362,17 @@ test('aiStoryboard adapter keeps same-shot image and video task refs separated d
   assert.equal(normalizedOutput?.sourceHandle, getAIStoryboardShotOutputHandle('shot-1'));
 });
 
-test('aiStoryboard adapter treats the right-side output node as committed state', async () => {
+test('aiStoryboard adapter treats shot with matching videoFileId as committed state', async () => {
   const workflow = createStoryboardWorkflow();
-  const outputNode = createDefaultFileNodeData(
-    createSequentialNodeId(101),
-    { x: 520, y: 100 },
-    'video',
-    'video-result-1',
-    'video-result-1.mp4',
-    2048,
-    'video/mp4',
-    { width: 1920, height: 1080, duration: 8 },
-    { type: 'node-output' },
-  );
-
-  workflow.nodes['101'] = outputNode;
-  (workflow.nodes['100'] as AINodeData).outputs = ['video-result-1'];
-  workflow.connections.push({
-    id: 'output-link-1',
-    type: 'output-link',
-    sourceId: '100',
-    targetId: '101',
-    sourceHandle: getAIStoryboardShotOutputHandle('shot-1'),
-    order: 0,
-  });
+  // Set the shot's videoFileId to match the result — this is how the runner
+  // marks a shot as having a committed video output after generation completes.
+  const storyboardNode = workflow.nodes['100'] as AINodeData;
+  const shots = storyboardNode.config.shots as StoryboardShotData[];
+  shots[0] = { ...shots[0], videoFileId: 'video-result-1' };
 
   const committed = await aiStoryboardExecutionRuntimeAdapter.isOutputCommitted?.({
     workflow,
-    node: workflow.nodes['100'] as AINodeData,
+    node: storyboardNode,
     snapshot: createRunSnapshot('video'),
     payload: createPayload('video'),
     output: {
@@ -407,7 +389,7 @@ test('aiStoryboard adapter treats the right-side output node as committed state'
     adapterContext: {
       workflowId: workflow.id,
       workflow,
-      node: workflow.nodes['100'] as AINodeData,
+      node: storyboardNode,
       nodeTitle: 'AI Storyboard',
       inputs: [],
       resolvedInputGroups: [],
@@ -423,51 +405,34 @@ test('aiStoryboard adapter treats the right-side output node as committed state'
   assert.equal(committed, true);
 });
 
-test('aiStoryboard adapter treats legacy node-level output links as committed state', async () => {
+test('aiStoryboard adapter treats shot with matching imageFileId as committed state', async () => {
   const workflow = createStoryboardWorkflow();
-  const outputNode = createDefaultFileNodeData(
-    createSequentialNodeId(101),
-    { x: 520, y: 100 },
-    'video',
-    'video-result-1',
-    'video-result-1.mp4',
-    2048,
-    'video/mp4',
-    { width: 1920, height: 1080, duration: 8 },
-    { type: 'node-output' },
-  );
-
-  workflow.nodes['101'] = outputNode;
-  (workflow.nodes['100'] as AINodeData).outputs = ['video-result-1'];
-  workflow.connections.push({
-    id: 'output-link-legacy',
-    type: 'output-link',
-    sourceId: '100',
-    targetId: '101',
-    sourceHandle: getAIStoryboardOutputHandle('group-1'),
-    order: 0,
-  });
+  // Set the shot's imageFileId to match the result — this is how the runner
+  // marks a shot as having a committed image output after generation completes.
+  const storyboardNode = workflow.nodes['100'] as AINodeData;
+  const shots = storyboardNode.config.shots as StoryboardShotData[];
+  shots[0] = { ...shots[0], imageFileId: 'image-result-1' };
 
   const committed = await aiStoryboardExecutionRuntimeAdapter.isOutputCommitted?.({
     workflow,
-    node: workflow.nodes['100'] as AINodeData,
-    snapshot: createRunSnapshot('video'),
-    payload: createPayload('video'),
+    node: storyboardNode,
+    snapshot: createRunSnapshot('image'),
+    payload: createPayload('image'),
     output: {
       nodeId: '100',
-      runId: 'run-storyboard-video',
-      taskId: 'task-shot-video-1',
-      taskType: 'video-gen',
-      resultFileId: 'video-result-1',
+      runId: 'run-storyboard-image',
+      taskId: 'task-shot-image-1',
+      taskType: 'image-gen',
+      resultFileId: 'image-result-1',
       groupId: 'shot-1',
       groupOrder: 0,
       sourceHandle: getAIStoryboardShotOutputHandle('shot-1'),
-      resultFile: createRunSnapshot('video').tasks[0]?.resultFileInfo,
+      resultFile: createRunSnapshot('image').tasks[0]?.resultFileInfo,
     },
     adapterContext: {
       workflowId: workflow.id,
       workflow,
-      node: workflow.nodes['100'] as AINodeData,
+      node: storyboardNode,
       nodeTitle: 'AI Storyboard',
       inputs: [],
       resolvedInputGroups: [],
@@ -553,7 +518,7 @@ test('aiStoryboard adapter skips stale snapshots when a newer task already owns 
   assert.equal(committed, true);
 });
 
-test('aiStoryboard adapter appends a new right-side file node for each committed result', async () => {
+test('aiStoryboard adapter commitExecutionOutputs creates file nodes for video outputs', async () => {
   let workflow = createStoryboardWorkflow();
   const storyboardNode = workflow.nodes['100'] as AINodeData;
   storyboardNode.tasks = [
@@ -573,172 +538,83 @@ test('aiStoryboard adapter appends a new right-side file node for each committed
       startedAt: 1,
       completedAt: 2,
     },
-    {
-      taskId: 'task-shot-video-2',
-      taskNo: 'TASK-SHOT-VIDEO-2',
-      runId: 'run-storyboard-video-2',
-      runNo: 'RUN-STORYBOARD-VIDEO-2',
-      taskType: 'video-gen',
-      scope: 'group',
-      groupId: 'shot-2',
-      groupLabel: 'Shot 2',
-      groupOrder: 2,
-      outputHandle: getAIStoryboardShotOutputHandle('shot-2'),
-      status: 'completed',
-      createdAt: 2,
-      startedAt: 2,
-      completedAt: 3,
-    },
   ];
 
-  const firstSnapshot = createRunSnapshot('video');
-  firstSnapshot.runId = 'run-storyboard-video-1';
-  firstSnapshot.runNo = 'RUN-STORYBOARD-VIDEO-1';
-  if (!firstSnapshot.tasks[0]) {
-    throw new Error('Expected first storyboard task');
+  const snapshot = createRunSnapshot('video');
+  snapshot.runId = 'run-storyboard-video-1';
+  snapshot.runNo = 'RUN-STORYBOARD-VIDEO-1';
+  if (!snapshot.tasks[0]) {
+    throw new Error('Expected storyboard task');
   }
-  firstSnapshot.tasks[0].taskId = 'task-shot-video-1';
-  firstSnapshot.tasks[0].taskNo = 'TASK-SHOT-VIDEO-1';
-  firstSnapshot.tasks[0].runId = 'run-storyboard-video-1';
-  firstSnapshot.tasks[0].runNo = 'RUN-STORYBOARD-VIDEO-1';
-  firstSnapshot.tasks[0].groupId = 'shot-1';
-  firstSnapshot.tasks[0].resultFileId = 'video-result-1';
-  if (firstSnapshot.tasks[0].resultFileInfo) {
-    firstSnapshot.tasks[0].resultFileInfo = {
-      ...firstSnapshot.tasks[0].resultFileInfo,
-      id: 'video-result-1',
-      name: 'video-result-1.mp4',
-      originalName: 'video-result-1.mp4',
-      hash: 'hash-video-result-1',
-      path: '/files/video-result-1/download',
-    };
+  snapshot.tasks[0].taskId = 'task-shot-video-1';
+  snapshot.tasks[0].taskNo = 'TASK-SHOT-VIDEO-1';
+  snapshot.tasks[0].runId = 'run-storyboard-video-1';
+  snapshot.tasks[0].runNo = 'RUN-STORYBOARD-VIDEO-1';
+  snapshot.tasks[0].groupId = 'shot-1';
+  snapshot.tasks[0].resultFileId = 'video-result-1';
+
+  const payload = createPayload('video');
+  const outputs = aiStoryboardExecutionRuntimeAdapter.extractExecutionOutputs(snapshot, {
+    workflowId: workflow.id,
+    nodeId: '100',
+    payload,
+    previousSnapshot: null,
+  });
+  const output = outputs[0];
+  if (!output) {
+    throw new Error('Expected extracted storyboard output');
   }
 
-  const secondSnapshot = createRunSnapshot('video');
-  secondSnapshot.runId = 'run-storyboard-video-2';
-  secondSnapshot.runNo = 'RUN-STORYBOARD-VIDEO-2';
-  if (!secondSnapshot.tasks[0]) {
-    throw new Error('Expected second storyboard task');
-  }
-  secondSnapshot.tasks[0].taskId = 'task-shot-video-2';
-  secondSnapshot.tasks[0].taskNo = 'TASK-SHOT-VIDEO-2';
-  secondSnapshot.tasks[0].runId = 'run-storyboard-video-2';
-  secondSnapshot.tasks[0].runNo = 'RUN-STORYBOARD-VIDEO-2';
-  secondSnapshot.tasks[0].groupId = 'shot-2';
-  secondSnapshot.tasks[0].resultFileId = 'video-result-2';
-  if (secondSnapshot.tasks[0].resultFileInfo) {
-    secondSnapshot.tasks[0].resultFileInfo = {
-      ...secondSnapshot.tasks[0].resultFileInfo,
-      id: 'video-result-2',
-      name: 'video-result-2.mp4',
-      originalName: 'video-result-2.mp4',
-      hash: 'hash-video-result-2',
-      path: '/files/video-result-2/download',
-    };
-  }
-
-  const payload = {
-    ...createPayload('video'),
-    targets: [
-      {
-        kind: 'group' as const,
-        nodeId: '100',
-        nodeType: 'aiStoryboard',
-        groupId: 'shot-1',
-        groupOrder: 1,
-        outputHandle: getAIStoryboardShotOutputHandle('shot-1'),
-      },
-      {
-        kind: 'group' as const,
-        nodeId: '100',
-        nodeType: 'aiStoryboard',
-        groupId: 'shot-2',
-        groupOrder: 2,
-        outputHandle: getAIStoryboardShotOutputHandle('shot-2'),
-      },
-    ],
-  };
-
-  const commitOnce = async (snapshot: ExecutionRuntimeRunState): Promise<void> => {
-    const outputs = aiStoryboardExecutionRuntimeAdapter.extractExecutionOutputs(snapshot, {
+  const result = await aiStoryboardExecutionRuntimeAdapter.commitExecutionOutputs?.({
+    workflowId: workflow.id,
+    runId: snapshot.runId,
+    node: storyboardNode,
+    snapshot,
+    payload,
+    adapter: aiStoryboardExecutionRuntimeAdapter,
+    adapterContext: {
       workflowId: workflow.id,
-      nodeId: '100',
-      payload,
-      previousSnapshot: null,
-    });
-    const output = outputs[0];
-    if (!output) {
-      throw new Error('Expected extracted storyboard output');
-    }
-
-    await aiStoryboardExecutionRuntimeAdapter.commitExecutionOutputs?.({
-      workflowId: workflow.id,
-      runId: snapshot.runId,
-      node: workflow.nodes['100'] as AINodeData,
-      snapshot,
-      payload,
-      adapter: aiStoryboardExecutionRuntimeAdapter,
-      adapterContext: {
-        workflowId: workflow.id,
-        workflow,
-        node: workflow.nodes['100'] as AINodeData,
-        nodeTitle: 'AI Storyboard',
-        inputs: [],
-        resolvedInputGroups: [],
-        services: {},
+      workflow,
+      node: storyboardNode,
+      nodeTitle: 'AI Storyboard',
+      inputs: [],
+      resolvedInputGroups: [],
+      services: {},
+    },
+    workflowAccess: {
+      getCurrentWorkflow: () => workflow,
+      applyRuntimeSnapshot: (runtime) => {
+        workflow = {
+          ...workflow,
+          nodes: runtime.nodes,
+          connections: runtime.connections,
+          viewport: runtime.viewport,
+          metadata: {
+            ...workflow.metadata,
+            ...runtime.metadata,
+          },
+        };
+        return workflow;
       },
-      workflowAccess: {
-        getCurrentWorkflow: () => workflow,
-        applyRuntimeSnapshot: (runtime) => {
-          workflow = {
-            ...workflow,
-            nodes: runtime.nodes,
-            connections: runtime.connections,
-            viewport: runtime.viewport,
-            metadata: {
-              ...workflow.metadata,
-              ...runtime.metadata,
-            },
-          };
-          return workflow;
-        },
-        resolveFileUrl: (fileId) => `/files/${fileId}/download`,
-      },
-      currentWorkflow: workflow,
-      preparedOutputs: [{
-        output,
-        fileInfo: output.resultFile,
-        runtimeResource: null,
-      }],
-    });
-  };
+      resolveFileUrl: (fileId) => `/files/${fileId}/download`,
+    },
+    currentWorkflow: workflow,
+    preparedOutputs: [{
+      output,
+      fileInfo: output.resultFile,
+      runtimeResource: null,
+    }],
+  });
 
-  await commitOnce(firstSnapshot);
-  await commitOnce(secondSnapshot);
+  assert.deepEqual(result, { changed: true });
 
-  const sourceNode = workflow.nodes['100'] as AINodeData;
   const outputNodes = Object.values(workflow.nodes).filter((node) => (
-    'fileId' in node && (node.fileId === 'video-result-1' || node.fileId === 'video-result-2')
+    'fileId' in node && node.fileId === 'video-result-1'
   ));
   const outputLinks = workflow.connections.filter((connection) => (
-    connection.type === 'output-link'
-    && connection.sourceId === '100'
-    && (
-      connection.sourceHandle === getAIStoryboardShotOutputHandle('shot-1')
-      || connection.sourceHandle === getAIStoryboardShotOutputHandle('shot-2')
-    )
+    connection.type === 'output-link' && connection.sourceId === '100'
   ));
 
-  assert.deepEqual(sourceNode.outputs, ['video-result-1', 'video-result-2']);
-  assert.equal(outputNodes.length, 2);
-  assert.equal(new Set(outputNodes.map((node) => node.id.value)).size, 2);
-  assert.equal(outputLinks.length, 2);
-  assert.equal(outputNodes.every((node) => node.position.x > storyboardNode.position.x + storyboardNode.dimensions.width), true);
-  assert.deepEqual(
-    outputLinks.map((connection) => workflow.nodes[connection.targetId])
-      .filter((node): node is FileNodeData => Boolean(node && 'fileId' in node))
-      .map((node) => node.fileId)
-      .sort(),
-    ['video-result-1', 'video-result-2'],
-  );
+  assert.equal(outputNodes.length, 1, 'should create a file node on canvas for video');
+  assert.equal(outputLinks.length, 1, 'should create an output-link connection for video');
 });

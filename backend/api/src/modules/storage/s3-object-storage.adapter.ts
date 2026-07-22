@@ -1,6 +1,7 @@
 import { createHash, createHmac } from "node:crypto";
+import { Readable } from "node:stream";
 
-import type { ObjectStorageAdapter, ObjectStorageReadResult } from "./object-storage.adapter.ts";
+import type { ObjectStorageAdapter, ObjectStorageReadResult, ObjectStorageStreamResult } from "./object-storage.adapter.ts";
 
 export interface S3ObjectStorageConfig {
   endpoint: string;
@@ -125,6 +126,33 @@ export class S3ObjectStorageAdapter implements ObjectStorageAdapter {
       lastModifiedAt: getHeader(response, "last-modified")
         ? new Date(getHeader(response, "last-modified")!).toISOString()
         : new Date().toISOString(),
+    };
+  }
+
+  async readStream(storageKey: string): Promise<ObjectStorageStreamResult> {
+    const response = await this.request("GET", storageKey);
+
+    if (!response.ok) {
+      throw new Error(`S3_READ_FAILED:${response.status}:${await response.text()}`);
+    }
+
+    const contentLength = getHeader(response, "content-length");
+    const byteLength = contentLength ? Number(contentLength) : 0;
+    const lastModifiedAt = getHeader(response, "last-modified")
+      ? new Date(getHeader(response, "last-modified")!).toISOString()
+      : new Date().toISOString();
+
+    if (!response.body) {
+      throw new Error("S3_READ_STREAM_NO_BODY");
+    }
+
+    const stream = Readable.fromWeb(response.body as any);
+
+    return {
+      stream,
+      byteLength,
+      storageKey: normalizeStorageKey(storageKey),
+      lastModifiedAt,
     };
   }
 

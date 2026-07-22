@@ -1,4 +1,5 @@
 import { createHash, randomUUID } from "node:crypto";
+import { createReadStream } from "node:fs";
 import fs from "node:fs/promises";
 import path from "node:path";
 
@@ -12,6 +13,7 @@ import type {
   FileAssetRecord,
   FileBlobRecord,
   FileContentReadResult,
+  FileContentStreamResult,
   FileContentVariant,
   FilesRepository,
   FileStore,
@@ -425,6 +427,27 @@ export class JsonFilesRepository implements FilesRepository {
     });
   }
 
+  async readFileContentStream(
+    fileId: string,
+  ): Promise<FileContentStreamResult | null> {
+    return this.withStoreLock(async () => {
+      const store = await this.readStoreUnsafe();
+      const fileRecord = store.files.find((file) => file.id === fileId);
+
+      if (!fileRecord || !fileRecord.blobId) {
+        return null;
+      }
+
+      const blob = store.blobs.find((item) => item.id === fileRecord.blobId);
+
+      if (!blob) {
+        return null;
+      }
+
+      return this.readStorageContentStream(blob.storageKey, blob.mimeType, blob.sha256);
+    });
+  }
+
   private async ensureInitializedUnsafe(): Promise<void> {
     await fs.mkdir(this.dataDir, { recursive: true });
     await fs.mkdir(this.filesDataDir, { recursive: true });
@@ -675,6 +698,25 @@ export class JsonFilesRepository implements FilesRepository {
       buffer,
       mimeType,
       byteLength: buffer.length,
+      storageKey,
+      blobSha256,
+      lastModifiedAt: new Date(stat.mtimeMs).toISOString(),
+    };
+  }
+
+  private async readStorageContentStream(
+    storageKey: string,
+    mimeType: string,
+    blobSha256: string,
+  ): Promise<FileContentStreamResult> {
+    const absolutePath = path.join(this.storageDir, storageKey);
+    const stat = await fs.stat(absolutePath);
+    const stream = createReadStream(absolutePath);
+
+    return {
+      stream,
+      mimeType,
+      byteLength: stat.size,
       storageKey,
       blobSha256,
       lastModifiedAt: new Date(stat.mtimeMs).toISOString(),

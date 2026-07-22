@@ -1,8 +1,10 @@
 import type {
   FileNodeData,
   StoryboardConfig,
+  StoryboardCreationType,
   StoryboardPersistedShotData,
   StoryboardShotData,
+  StoryboardVideoDuration,
 } from '@/types';
 import {
   AI_IMAGE_GEN_NODE_VISIBLE_MODEL_OPTIONS,
@@ -15,12 +17,14 @@ import {
 } from '@/nodes/ai-image-gen/constants';
 import {
   AI_VIDEO_GEN_DEFAULT_ASPECT_RATIO,
+  AI_VIDEO_GEN_DEFAULT_DURATION_SECONDS,
   AI_VIDEO_GEN_DEFAULT_MODEL,
   AI_VIDEO_GEN_DEFAULT_RESOLUTION,
   AI_VIDEO_GEN_MODEL_OPTIONS,
   AI_VIDEO_GEN_SUPPORTED_ASPECT_RATIOS,
   AI_VIDEO_GEN_SUPPORTED_RESOLUTIONS,
   normalizeAIVideoGenAspectRatio,
+  normalizeAIVideoGenDuration,
   normalizeAIVideoGenModel,
   normalizeAIVideoGenParameters,
   normalizeAIVideoGenResolution,
@@ -32,7 +36,7 @@ export interface StoryboardShotDefaults {
   defaultImageAspectRatio: AIImageGenNodeAspectRatio;
   defaultImageSize: AIImageGenNodeImageSize;
   defaultVideoModel: string;
-  defaultVideoDuration: 8;
+  defaultVideoDuration: StoryboardVideoDuration;
   defaultVideoAspectRatio: string;
   defaultVideoResolution: string;
 }
@@ -55,7 +59,30 @@ export interface StoryboardResolvedInputImage {
 const DEFAULT_IMAGE_MODEL: AIImageGenNodeModel = 'gpt-image-2';
 const DEFAULT_IMAGE_ASPECT_RATIO: AIImageGenNodeAspectRatio = 'auto';
 const DEFAULT_IMAGE_SIZE: AIImageGenNodeImageSize = '1K';
-const DEFAULT_VIDEO_DURATION = 8 as const;
+const DEFAULT_VIDEO_DURATION: StoryboardVideoDuration = AI_VIDEO_GEN_DEFAULT_DURATION_SECONDS;
+
+export function normalizeStoryboardVideoDuration(value: unknown): StoryboardVideoDuration {
+  return normalizeAIVideoGenDuration(value) ?? DEFAULT_VIDEO_DURATION;
+}
+
+export const VALID_CREATION_TYPES: readonly StoryboardCreationType[] = [
+  'architecture',
+  'product',
+  'narrative',
+  'custom',
+] as const;
+
+export function normalizeStoryboardCreationType(
+  value: unknown,
+): StoryboardCreationType | undefined {
+  if (typeof value !== 'string') {
+    return undefined;
+  }
+
+  return (VALID_CREATION_TYPES as readonly string[]).includes(value)
+    ? (value as StoryboardCreationType)
+    : undefined;
+}
 
 function normalizeStoryboardImageModel(
   value: unknown,

@@ -6,6 +6,7 @@ import {
   normalizeAIVideoGenParameters,
   normalizeAIVideoGenResolution,
   type AIVideoGenSupportedAspectRatio,
+  type AIVideoGenSupportedDurationSeconds,
   type AIVideoGenSupportedModel,
   type AIVideoGenSupportedResolution,
   type AIVideoGenSupportedSize,
@@ -211,7 +212,7 @@ export type CreateAIVideoGenExecutionRequest = CreateExecutionRequestBase<
 > & {
   prompt: string;
   model: AIVideoGenSupportedModel | string;
-  duration: 8;
+  duration: AIVideoGenSupportedDurationSeconds;
   aspectRatio?: AIVideoGenSupportedAspectRatio | string;
   resolution?: AIVideoGenSupportedResolution | string;
   size?: AIVideoGenSupportedSize | string;

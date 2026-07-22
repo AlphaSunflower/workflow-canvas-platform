@@ -24,6 +24,7 @@ import type {
   FileAssetRecord,
   FileBlobRecord,
   FileContentReadResult,
+  FileContentStreamResult,
   FileContentVariant,
   FilesRepository,
   PendingUploadRecord,
@@ -521,6 +522,24 @@ export class DbFilesRepository implements FilesRepository {
     }
 
     return this.readStorageContent(blob.storageKey, blob.mimeType, blob.sha256);
+  }
+
+  async readFileContentStream(
+    fileId: string,
+  ): Promise<FileContentStreamResult | null> {
+    const fileRecord = await this.findFileRecordById(fileId);
+
+    if (!fileRecord || !fileRecord.blobId || fileRecord.status !== "ready") {
+      return null;
+    }
+
+    const blob = await this.findBlobById(fileRecord.blobId);
+
+    if (!blob) {
+      return null;
+    }
+
+    return this.readStorageContentStream(blob.storageKey, blob.mimeType, blob.sha256);
   }
 
   async query<T extends DbQueryRow = DbQueryRow>(
@@ -1375,6 +1394,23 @@ export class DbFilesRepository implements FilesRepository {
 
     return {
       buffer: result.buffer,
+      mimeType,
+      byteLength: result.byteLength,
+      storageKey: result.storageKey,
+      blobSha256,
+      lastModifiedAt: result.lastModifiedAt,
+    };
+  }
+
+  private async readStorageContentStream(
+    storageKey: string,
+    mimeType: string,
+    blobSha256: string,
+  ): Promise<FileContentStreamResult> {
+    const result = await this.objectStorage.readStream(storageKey);
+
+    return {
+      stream: result.stream,
       mimeType,
       byteLength: result.byteLength,
       storageKey: result.storageKey,

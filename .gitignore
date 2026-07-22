@@ -61,3 +61,7 @@ coverage/
 
 # Local scripts that are environment-specific
 *.local
+
+# Screenshots and temp images
+docs/Snipaste_*.png
+docs/*.tmp.png

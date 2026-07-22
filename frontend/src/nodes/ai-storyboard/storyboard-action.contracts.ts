@@ -5,6 +5,14 @@ export interface StoryboardNodeActionServices {
       signal?: AbortSignal;
     },
   ) => Promise<void>;
+  runStoryArrange: (
+    nodeId: string,
+    storyText: string,
+    creationType: 'architecture' | 'product' | 'narrative' | 'custom',
+    options?: {
+      signal?: AbortSignal;
+    },
+  ) => Promise<void>;
   runShotImage: (
     nodeId: string,
     shotId: string,

@@ -170,8 +170,8 @@ test('storyboard shot previews keep a thumbnail fallback independent of low-zoom
   expectContains(shotPreviewSource, /ai-storyboard-shot-preview__button/);
   expectContains(shotPreviewSource, /file-node__viewer-backdrop/);
   expectContains(shotPreviewSource, /const sourceThumbnailUrl = sourceNode && sourceNode\.type === 'image'[\s\S]*?getFileNodeImageThumbnailUrl\(sourceNode\)/);
-  expectContains(shotPreviewSource, /const protectedResourceUrl = src \?\? imageResource\.requestUrl \?\? sourceThumbnailUrl;/);
-  expectContains(shotPreviewSource, /const resolvedSrc = src[\s\S]*?\? protectedResource\.resolvedUrl[\s\S]*?: \(imageResource\.src \?\? protectedResource\.resolvedUrl\);/);
+  expectContains(shotPreviewSource, /const protectedResourceUrl = activeSrc \?\? imageResource\.requestUrl \?\? sourceThumbnailUrl;/);
+  expectContains(shotPreviewSource, /const resolvedSrc = isVideo[\s\S]*?\? videoDirectUrl[\s\S]*?: \(imageResource\.src \?\? protectedResource\.resolvedUrl\);/);
 });
 
 test('storyboard stylesheet no longer keeps removed legacy dialog and broad article fallback rules', () => {

@@ -6,7 +6,7 @@ import type { AINodeData, FileNodeData, Workflow } from '@/types';
 import { createDefaultAINodeData, createDefaultFileNodeData, createSequentialNodeId } from '@/utils/node/create';
 import {
   AI_VIDEO_GEN_DEFAULT_MODEL,
-  AI_VIDEO_GEN_DURATION_SECONDS,
+  AI_VIDEO_GEN_DEFAULT_DURATION_SECONDS,
   AI_VIDEO_GEN_DEFAULT_ASPECT_RATIO,
   AI_VIDEO_GEN_DEFAULT_RESOLUTION,
   AI_VIDEO_GEN_PROVIDER,
@@ -87,7 +87,7 @@ function createNode(): AINodeData {
     ...node.config,
     prompt: 'Create a smooth product demo video',
     model: AI_VIDEO_GEN_DEFAULT_MODEL,
-    duration: AI_VIDEO_GEN_DURATION_SECONDS,
+    duration: AI_VIDEO_GEN_DEFAULT_DURATION_SECONDS,
     aspectRatio: '9:16',
     resolutionPreset: '1080p',
     inputGroups: [
@@ -159,13 +159,13 @@ test('aiVideoGen runtime validates prompt, model, duration and group bounds', ()
   assert.equal(normalizeAIVideoGenPrompt(undefined), '');
   assert.equal(normalizeAIVideoGenModel(AI_VIDEO_GEN_DEFAULT_MODEL), AI_VIDEO_GEN_DEFAULT_MODEL);
   assert.equal(normalizeAIVideoGenModel('veo-3.1'), 'veo-3.1-generate-preview');
-  assert.equal(normalizeAIVideoGenDuration(AI_VIDEO_GEN_DURATION_SECONDS), AI_VIDEO_GEN_DURATION_SECONDS);
+  assert.equal(normalizeAIVideoGenDuration(AI_VIDEO_GEN_DEFAULT_DURATION_SECONDS), AI_VIDEO_GEN_DEFAULT_DURATION_SECONDS);
   assert.equal(normalizeAIVideoGenDuration(12), null);
 
   const missingPrompt = validateAIVideoGenExecutionInput({
     prompt: '   ',
     model: AI_VIDEO_GEN_DEFAULT_MODEL,
-    duration: AI_VIDEO_GEN_DURATION_SECONDS,
+    duration: AI_VIDEO_GEN_DEFAULT_DURATION_SECONDS,
     groups: [{ groupId: 'group-1', groupLabel: 'Group 1', inputCount: 1 }],
   });
   assert.ok(assertInvalid(missingPrompt).length > 0);
@@ -173,7 +173,7 @@ test('aiVideoGen runtime validates prompt, model, duration and group bounds', ()
   const invalidModel = validateAIVideoGenExecutionInput({
     prompt: 'ok',
     model: 'veo-2',
-    duration: AI_VIDEO_GEN_DURATION_SECONDS,
+    duration: AI_VIDEO_GEN_DEFAULT_DURATION_SECONDS,
     groups: [{ groupId: 'group-1', groupLabel: 'Group 1', inputCount: 1 }],
   });
   assert.ok(assertInvalid(invalidModel).length > 0);
@@ -181,7 +181,7 @@ test('aiVideoGen runtime validates prompt, model, duration and group bounds', ()
   const invalidDuration = validateAIVideoGenExecutionInput({
     prompt: 'ok',
     model: AI_VIDEO_GEN_DEFAULT_MODEL,
-    duration: 4,
+    duration: 5,
     groups: [{ groupId: 'group-1', groupLabel: 'Group 1', inputCount: 1 }],
   });
   assert.ok(assertInvalid(invalidDuration).length > 0);
@@ -189,7 +189,7 @@ test('aiVideoGen runtime validates prompt, model, duration and group bounds', ()
   const overflowGroup = validateAIVideoGenExecutionInput({
     prompt: 'ok',
     model: AI_VIDEO_GEN_DEFAULT_MODEL,
-    duration: AI_VIDEO_GEN_DURATION_SECONDS,
+    duration: AI_VIDEO_GEN_DEFAULT_DURATION_SECONDS,
     groups: [{ groupId: 'group-1', groupLabel: 'Group 1', inputCount: 3 }],
   });
   assertInvalid(overflowGroup, /Group 1/);
@@ -333,7 +333,7 @@ test('aiVideoGen runtime builds backend group plans with result handles and filt
     ],
   );
   assert.equal(plans[0]?.plan.config.model, AI_VIDEO_GEN_DEFAULT_MODEL);
-  assert.equal(plans[0]?.plan.config.duration, AI_VIDEO_GEN_DURATION_SECONDS);
+  assert.equal(plans[0]?.plan.config.duration, AI_VIDEO_GEN_DEFAULT_DURATION_SECONDS);
   assert.equal(plans[0]?.plan.config.aspectRatio, '9:16');
   assert.equal(plans[0]?.plan.config.resolutionPreset, '1080p');
   assert.equal(plans[0]?.plan.config.size, '1080x1920');

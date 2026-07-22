@@ -37,12 +37,15 @@ export type {
 export {
   aiStoryboardApi,
   arrangeStoryboardShots,
+  arrangeStoryboardFromStory,
 } from './services/ai-storyboard-api';
 export type {
   StoryboardArrangeRequest,
   StoryboardArrangeResponse,
   StoryboardArrangeShotRequest,
   StoryboardArrangeShotResponse,
+  StoryboardCreationType,
+  StoryboardStoryArrangeRequest,
 } from './services/ai-storyboard-api';
 
 export { workflowApi, aiApi } from './services/workflow-api';

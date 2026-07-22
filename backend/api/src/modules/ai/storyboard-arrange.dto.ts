@@ -1,7 +1,10 @@
 import {
   AI_STORYBOARD_ARRANGE_NODE_TYPE,
   AI_STORYBOARD_ARRANGE_PROMPT_VERSION,
+  AI_STORYBOARD_STORY_MAX_TEXT_LENGTH,
+  VALID_CREATION_TYPES,
 } from "./storyboard-arrange.constants.ts";
+import type { StoryboardCreationType } from "./storyboard-arrange.constants.ts";
 
 export interface StoryboardArrangeShotRequest {
   shotId: string;
@@ -16,10 +19,19 @@ export interface StoryboardArrangeRequest {
   shots: StoryboardArrangeShotRequest[];
 }
 
+export interface StoryboardStoryArrangeRequest {
+  workflowId: string;
+  nodeId: string;
+  nodeType: typeof AI_STORYBOARD_ARRANGE_NODE_TYPE;
+  storyText: string;
+  creationType: StoryboardCreationType;
+}
+
 export interface StoryboardArrangeShotResult {
   shotId: string;
   order: number;
   prompt: string;
+  shotDescription?: string;
 }
 
 export interface StoryboardArrangeResponseData {
@@ -113,5 +125,37 @@ export function validateStoryboardArrangeRequest(input: unknown): StoryboardArra
     nodeId: readRequiredString(body, "nodeId", "INVALID_NODE_ID"),
     nodeType: AI_STORYBOARD_ARRANGE_NODE_TYPE,
     shots: normalizeShots(body.shots),
+  };
+}
+
+export function validateStoryboardStoryArrangeRequest(
+  input: unknown,
+): StoryboardStoryArrangeRequest {
+  const body = assertBody(input);
+  const nodeType = readRequiredString(body, "nodeType", "INVALID_NODE_TYPE");
+
+  if (nodeType !== AI_STORYBOARD_ARRANGE_NODE_TYPE) {
+    throw new Error("INVALID_NODE_TYPE");
+  }
+
+  const storyText = readRequiredString(body, "storyText", "INVALID_STORY_TEXT");
+
+  if (storyText.length > AI_STORYBOARD_STORY_MAX_TEXT_LENGTH) {
+    throw new Error("STORY_TEXT_TOO_LONG");
+  }
+
+  const creationTypeRaw = readRequiredString(body, "creationType", "INVALID_CREATION_TYPE");
+  const creationType = creationTypeRaw as StoryboardCreationType;
+
+  if (!(VALID_CREATION_TYPES as readonly string[]).includes(creationType)) {
+    throw new Error("INVALID_CREATION_TYPE");
+  }
+
+  return {
+    workflowId: readRequiredString(body, "workflowId", "INVALID_WORKFLOW_ID"),
+    nodeId: readRequiredString(body, "nodeId", "INVALID_NODE_ID"),
+    nodeType: AI_STORYBOARD_ARRANGE_NODE_TYPE,
+    storyText,
+    creationType,
   };
 }

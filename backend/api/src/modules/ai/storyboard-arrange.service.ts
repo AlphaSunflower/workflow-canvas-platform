@@ -2,15 +2,23 @@ import type {
   StoryboardArrangeCommand,
   StoryboardArrangeResult,
   StoryboardArrangeShotCommand,
+  StoryboardStoryArrangeCommand,
 } from "./storyboard-arrange.contracts.ts";
 import {
   AI_STORYBOARD_ARRANGE_IMAGE_MAX_DIMENSION,
   AI_STORYBOARD_ARRANGE_IMAGE_QUALITY,
   AI_STORYBOARD_ARRANGE_NODE_TYPE,
   AI_STORYBOARD_ARRANGE_PROMPT_VERSION,
+  AI_STORYBOARD_STORY_PROMPT_VERSION,
 } from "./storyboard-arrange.constants.ts";
-import { buildStoryboardArrangeMessages } from "./storyboard-arrange.messages.ts";
-import { parseStoryboardArrangeResult } from "./storyboard-arrange.result.ts";
+import {
+  buildStoryboardArrangeMessages,
+  buildStoryboardStoryMessages,
+} from "./storyboard-arrange.messages.ts";
+import {
+  parseStoryboardArrangeResult,
+  parseStoryboardStoryArrangeResult,
+} from "./storyboard-arrange.result.ts";
 import {
   prepareAiMultimodalImages,
   type PromptOptimizeImageInput,
@@ -58,6 +66,30 @@ export class StoryboardArrangeService {
       model: result.model,
       referenceCount: preparedImages.length,
       promptVersion: AI_STORYBOARD_ARRANGE_PROMPT_VERSION,
+      mode: "image",
+    };
+  }
+
+  async arrangeFromStory(
+    _authenticated: AuthenticatedAccount,
+    request: StoryboardStoryArrangeCommand,
+  ): Promise<StoryboardArrangeResult> {
+    this.assertStoryRequestBoundary(request);
+
+    const messages = buildStoryboardStoryMessages({
+      storyText: request.storyText,
+      creationType: request.creationType,
+    });
+
+    const result = await this.visionClient.complete({ messages });
+    const shots = parseStoryboardStoryArrangeResult(result.contentText);
+
+    return {
+      shots,
+      model: result.model,
+      referenceCount: 0,
+      promptVersion: AI_STORYBOARD_STORY_PROMPT_VERSION,
+      mode: "story",
     };
   }
 
@@ -68,6 +100,16 @@ export class StoryboardArrangeService {
 
     if (request.shots.length === 0) {
       throw new Error("INVALID_SHOTS");
+    }
+  }
+
+  private assertStoryRequestBoundary(request: StoryboardStoryArrangeCommand): void {
+    if (request.nodeType !== AI_STORYBOARD_ARRANGE_NODE_TYPE) {
+      throw new Error("INVALID_NODE_TYPE");
+    }
+
+    if (!request.storyText || request.storyText.trim().length === 0) {
+      throw new Error("INVALID_STORY_TEXT");
     }
   }
 

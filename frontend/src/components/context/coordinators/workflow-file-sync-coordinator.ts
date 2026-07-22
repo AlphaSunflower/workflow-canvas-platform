@@ -239,6 +239,21 @@ export function useWorkflowFileSyncCoordinator(
     }
   }, [workflow.lastSaveError]);
 
+  useEffect(() => {
+    const handleBeforeUnload = (): void => {
+      if (!autoSaveDirtyRef.current || !workflowRef.current) {
+        return;
+      }
+
+      void saveWorkflow({ force: true, silent: true }).catch(() => {
+        // Best-effort save on unload — may not complete before page closes
+      });
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [saveWorkflow, workflowRef]);
+
   return {
     workflowFileSyncBlockReason,
   };

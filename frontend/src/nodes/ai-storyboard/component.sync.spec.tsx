@@ -501,7 +501,7 @@ test('storyboard preview url is only built for generated backend image files', (
 
   assert.equal(resolveStoryboardGeneratedImagePreviewUrl({
     imageFileId: 'backend-image-1',
-  }), '/api/v1/files/backend-image-1/preview');
+  }), '/api/v1/files/backend-image-1/thumbnail');
 });
 
 test('storyboard shot sync appends new input images and tracks processed ids without duplicating existing shots', () => {

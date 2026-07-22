@@ -184,6 +184,14 @@ function isAbortError(error: unknown): boolean {
   );
 }
 
+function isTransientServerError(error: unknown): boolean {
+  if (!isExecutionError(error)) {
+    return false;
+  }
+  const httpStatus = (error as ExecutionError & { details?: { httpStatus?: number } }).details?.httpStatus;
+  return httpStatus === 502 || httpStatus === 503 || httpStatus === 504;
+}
+
 export class LaozhangVeoClient {
   private readonly apiKey: string | null;
   private readonly apiBaseUrl: string;
@@ -492,79 +500,93 @@ export class LaozhangVeoClient {
     snapshotLabel: string;
     snapshotRequestBody: unknown;
   }): Promise<{ responseText: string; snapshotPath: string }> {
-    const controller = new AbortController();
+    const maxRetries = 2;
     const timeoutMs = input.timeoutMs ?? AI_VIDEO_GEN_DEFAULT_TIMEOUT_MS;
-    const timeoutId = setTimeout(() => {
-      controller.abort();
-    }, timeoutMs);
 
-    let responseText = "";
-    let snapshotPath = "";
+    for (let attempt = 0; attempt <= maxRetries; attempt++) {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => {
+        controller.abort();
+      }, timeoutMs);
 
-    try {
-      const headers: Record<string, string> = {};
-      let body: string | FormData | undefined = input.body;
+      let responseText = "";
+      let snapshotPath = "";
 
-      if (input.jsonBody) {
-        headers["Content-Type"] = "application/json";
-        body = JSON.stringify(input.jsonBody);
-      }
+      try {
+        const headers: Record<string, string> = {};
+        let body: string | FormData | undefined = input.body;
 
-      if (this.apiKey) {
-        headers.Authorization = `Bearer ${this.apiKey}`;
-      }
+        if (input.jsonBody) {
+          headers["Content-Type"] = "application/json";
+          body = JSON.stringify(input.jsonBody);
+        }
 
-      const response = await this.fetchImpl(input.url, {
-        method: input.method,
-        headers,
-        body,
-        signal: controller.signal,
-      });
+        if (this.apiKey) {
+          headers.Authorization = `Bearer ${this.apiKey}`;
+        }
 
-      responseText = await response.text();
-      snapshotPath = await this.saveResponseSnapshot({
-        label: input.snapshotLabel,
-        url: input.url,
-        method: input.method,
-        requestBody: input.snapshotRequestBody,
-        responseText,
-        status: response.status,
-      });
-
-      if (!response.ok) {
-        throw createHttpError({
-          status: response.status,
-          url: input.url,
-          responseBody: responseText,
-          snapshotPath,
+        const response = await this.fetchImpl(input.url, {
+          method: input.method,
+          headers,
+          body,
+          signal: controller.signal,
         });
-      }
 
-      return {
-        responseText,
-        snapshotPath,
-      };
-    } catch (error) {
-      if (isExecutionError(error)) {
-        throw error;
-      }
-
-      if (isAbortError(error)) {
-        throw createTimeoutError(timeoutMs, {
+        responseText = await response.text();
+        snapshotPath = await this.saveResponseSnapshot({
+          label: input.snapshotLabel,
           url: input.url,
+          method: input.method,
+          requestBody: input.snapshotRequestBody,
+          responseText,
+          status: response.status,
+        });
+
+        if (!response.ok) {
+          throw createHttpError({
+            status: response.status,
+            url: input.url,
+            responseBody: responseText,
+            snapshotPath,
+          });
+        }
+
+        return {
+          responseText,
+          snapshotPath,
+        };
+      } catch (error) {
+        clearTimeout(timeoutId);
+
+        // Retry transient server errors (502, 503, 504)
+        if (attempt < maxRetries && isTransientServerError(error)) {
+          await new Promise<void>((resolve) => setTimeout(resolve, 2000 * (attempt + 1)));
+          continue;
+        }
+
+        if (isExecutionError(error)) {
+          throw error;
+        }
+
+        if (isAbortError(error)) {
+          throw createTimeoutError(timeoutMs, {
+            url: input.url,
+            snapshotPath: snapshotPath || undefined,
+          });
+        }
+
+        throw createNetworkError("Laozhang Veo network request failed.", {
+          url: input.url,
+          cause: error instanceof Error ? error.message : ERROR_CODES.networkError,
+          responseBody: responseText || undefined,
           snapshotPath: snapshotPath || undefined,
         });
+      } finally {
+        clearTimeout(timeoutId);
       }
-
-      throw createNetworkError("Laozhang Veo network request failed.", {
-        url: input.url,
-        cause: error instanceof Error ? error.message : ERROR_CODES.networkError,
-        responseBody: responseText || undefined,
-        snapshotPath: snapshotPath || undefined,
-      });
-    } finally {
-      clearTimeout(timeoutId);
     }
+
+    throw new Error("Laozhang Veo request failed after all retries.");
   }
 
   private async tryGetVideoContentAsBinary(input: {
