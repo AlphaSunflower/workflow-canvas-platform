@@ -39,6 +39,8 @@ import {
   mergeStoryboardNodeTaskRefs,
   resolveStoryboardExecutionReferenceFileIds,
 } from './storyboard-execution-service';
+import { getAIStoryboardInputHandle } from './groups';
+import type { StoryboardShotConnectedImage } from './types';
 import type { StoryboardExecutionNotifications } from './storyboard-shot-image-runner';
 
 function isAbortError(error: unknown): boolean {
@@ -240,19 +242,43 @@ export async function runStoryboardShotVideo(
       ? dependencies.getNodeById(persistedShot.sourceNodeId)
       : null
   );
+
+  // Resolve connected images from per-shot input port directly from workflow connections
+  const shotInputHandle = getAIStoryboardInputHandle(shotId);
+  const connectedImages: StoryboardShotConnectedImage[] = [];
+  const incomingConnections = persistedWorkflow.connections.filter(
+    (conn) => conn.type === 'file-reference'
+      && conn.targetId === nodeId
+      && conn.targetHandle === shotInputHandle,
+  );
+  for (let i = 0; i < incomingConnections.length; i++) {
+    const conn = incomingConnections[i];
+    const connSourceNode = dependencies.getNodeById(conn.sourceId);
+    if (connSourceNode && isFileNodeData(connSourceNode) && connSourceNode.type === 'image') {
+      connectedImages.push({
+        sourceNodeId: connSourceNode.id.value,
+        sourceFileId: connSourceNode.fileId,
+        sourceNode: connSourceNode,
+        fileName: connSourceNode.fileName,
+        order: i,
+      });
+    }
+  }
+
   const { referenceFileIds: normalizedReferenceFileIds, unavailableReason } = await resolveStoryboardExecutionReferenceFileIds({
     shot: persistedShot,
     sourceNode: sourceNode && isFileNodeData(sourceNode) && sourceNode.type === 'image'
       ? sourceNode
       : null,
+    connectedImages,
     signal: options?.signal,
-    maxReferences: 2,
+    maxReferences: 4,
     ensureBackendFileId: dependencies.ensureBackendFileId,
     workflowId: persistedWorkflow.id,
   });
 
   if (normalizedReferenceFileIds.length === 0) {
-    const reason = getStoryboardShotVideoUnavailableReason(persistedShot)
+    const reason = getStoryboardShotVideoUnavailableReason(persistedShot, connectedImages)
       ?? unavailableReason
       ?? '当前镜头缺少可用参考图，无法执行视频生成。';
     dependencies.patchStoryboardShotState(nodeId, shotId, (shots) => shots.map((item) => (
@@ -520,6 +546,11 @@ export async function runStoryboardShotVideo(
           dependencies.buildExecutionRuntimeAdapterContext(persistedNode, options?.signal),
         ),
       );
+
+      // Only write videoFileId to shot if it has an imageFileId (preview exists)
+      // Otherwise, the video output node will be connected via output-link
+      const hasImagePreview = typeof persistedShot.imageFileId === 'string' && persistedShot.imageFileId.trim().length > 0;
+
       dependencies.patchStoryboardShotState(nodeId, shotId, (shots) => shots.map((item) => (
         item.id === shotId
           ? {
@@ -528,7 +559,7 @@ export async function runStoryboardShotVideo(
             videoGenStatus: 'completed' as const,
             videoProgress: 100,
             videoError: undefined,
-            videoFileId: finalTask.resultFileId ?? undefined,
+            ...(hasImagePreview ? { videoFileId: finalTask.resultFileId ?? undefined } : {}),
           }
           : item
       )));
@@ -545,6 +576,9 @@ export async function runStoryboardShotVideo(
         fileType: 'video',
       });
       if (committedState) {
+        // Only write videoFileId to shot if it has an imageFileId (preview exists)
+        const hasImagePreview = typeof persistedShot.imageFileId === 'string' && persistedShot.imageFileId.trim().length > 0;
+
         dependencies.patchStoryboardShotState(nodeId, shotId, (shots) => shots.map((item) => (
           item.id === shotId
             ? {
@@ -553,7 +587,7 @@ export async function runStoryboardShotVideo(
               videoGenStatus: 'completed',
               videoProgress: 100,
               videoError: undefined,
-              ...(typeof committedState.resultFileId === 'string' ? { videoFileId: committedState.resultFileId } : {}),
+              ...(hasImagePreview && typeof committedState.resultFileId === 'string' ? { videoFileId: committedState.resultFileId } : {}),
             }
             : item
         )));
@@ -565,6 +599,9 @@ export async function runStoryboardShotVideo(
     // Recovery: if we observed a resultFileId during polling (worker set it before crashing),
     // treat the task as completed even though the backend task status is still 'processing'.
     if (typeof observedResultFileId === 'string' && observedResultFileId.length > 0) {
+      // Only write videoFileId to shot if it has an imageFileId (preview exists)
+      const hasImagePreview = typeof persistedShot.imageFileId === 'string' && persistedShot.imageFileId.trim().length > 0;
+
       dependencies.patchStoryboardShotState(nodeId, shotId, (shots) => shots.map((item) => (
         item.id === shotId
           ? {
@@ -573,7 +610,7 @@ export async function runStoryboardShotVideo(
             videoGenStatus: 'completed',
             videoProgress: 100,
             videoError: undefined,
-            videoFileId: observedResultFileId,
+            ...(hasImagePreview ? { videoFileId: observedResultFileId } : {}),
           }
           : item
       )));

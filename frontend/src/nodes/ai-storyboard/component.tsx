@@ -29,7 +29,7 @@ import {
   getAIStoryboardOutputHandle,
   resolveAIStoryboardInputGroups,
 } from './groups';
-import { resolveStoryboardInputImages } from './input-resolver';
+import { resolveStoryboardInputImages, resolveStoryboardShotConnectedImages } from './input-resolver';
 import {
   getStoryboardExternalState,
   isStoryboardLocalStateEqual,
@@ -865,6 +865,14 @@ const AIStoryboardNodeInner: React.FC<AIStoryboardNodeProps> = ({
     workflowActions,
   ]);
 
+  const shotConnectedImagesMap = useMemo(() => {
+    const map = new Map<string, import('./types').StoryboardShotConnectedImage[]>();
+    for (const shot of storyboardState.shots) {
+      map.set(shot.id, resolveStoryboardShotConnectedImages(resolvedInputs, shot.id));
+    }
+    return map;
+  }, [resolvedInputs, storyboardState.shots]);
+
   const generateShotVideo = useCallback(async (shotId: string): Promise<void> => {
     const targetShot = storyboardState.shots.find((shot) => shot.id === shotId);
     if (!targetShot) {
@@ -873,6 +881,7 @@ const AIStoryboardNodeInner: React.FC<AIStoryboardNodeProps> = ({
 
     const availability = resolveAIStoryboardShotVideoAvailability({
       shot: targetShot,
+      connectedImages: shotConnectedImagesMap.get(shotId),
     });
 
     if (!availability.enabled) {
@@ -948,6 +957,7 @@ const AIStoryboardNodeInner: React.FC<AIStoryboardNodeProps> = ({
     data.id.value,
     patchShot,
     runtime.notification,
+    shotConnectedImagesMap,
     storyboardState,
     workflowActions,
   ]);
@@ -984,6 +994,7 @@ const AIStoryboardNodeInner: React.FC<AIStoryboardNodeProps> = ({
   const storyboardViewProps = useMemo<StoryboardShotTimelineViewProps>(() => ({
     shots: storyboardState.shots,
     previews: shotPreviewMap,
+    connectedImagesMap: shotConnectedImagesMap,
     nodeColor,
     onPatchShot: patchShot,
     onDeleteShot: deleteShot,
@@ -999,6 +1010,7 @@ const AIStoryboardNodeInner: React.FC<AIStoryboardNodeProps> = ({
     generateShotVideo,
     nodeColor,
     patchShot,
+    shotConnectedImagesMap,
     shotPreviewMap,
     storyboardState.shots,
   ]);

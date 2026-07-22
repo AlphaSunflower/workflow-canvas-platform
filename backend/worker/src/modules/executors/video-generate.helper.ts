@@ -754,7 +754,7 @@ export class VideoGenerateHelper {
     const content = await this.filesRepository.readFileContent(fileId);
 
     if (!content) {
-      throw new Error(errorCode);
+      throw new Error(`${errorCode}: ${fileId}`);
     }
 
     return content;

@@ -1,4 +1,5 @@
 import type { StoryboardShotData } from '@/types';
+import type { StoryboardShotConnectedImage } from './types';
 
 export interface AIStoryboardShotVideoAvailability {
   enabled: boolean;
@@ -12,6 +13,7 @@ export interface AIStoryboardShotVideoRequestHandle {
 
 interface ResolveAIStoryboardShotVideoAvailabilityOptions {
   shot: StoryboardShotData;
+  connectedImages?: StoryboardShotConnectedImage[];
   isGenerating?: boolean;
 }
 
@@ -28,9 +30,17 @@ function hasPrompt(shot: StoryboardShotData): boolean {
   return typeof shot.prompt === 'string' && shot.prompt.trim().length > 0;
 }
 
-function hasUsableStoryboardVideoReference(shot: StoryboardShotData): boolean {
+function hasUsableStoryboardVideoReference(
+  shot: StoryboardShotData,
+  connectedImages?: StoryboardShotConnectedImage[],
+): boolean {
   const imageFileId = normalizeId(shot.imageFileId);
   if (imageFileId) {
+    return true;
+  }
+
+  // Check connected images from per-shot input port
+  if (connectedImages && connectedImages.length > 0) {
     return true;
   }
 
@@ -47,16 +57,19 @@ function hasUsableStoryboardVideoReference(shot: StoryboardShotData): boolean {
   );
 }
 
-export function getStoryboardShotVideoUnavailableReason(shot: StoryboardShotData): string | null {
+export function getStoryboardShotVideoUnavailableReason(
+  shot: StoryboardShotData,
+  connectedImages?: StoryboardShotConnectedImage[],
+): string | null {
   if (!hasPrompt(shot)) {
     return '请先填写该镜头的运镜提示词。';
   }
 
-  if (hasUsableStoryboardVideoReference(shot)) {
+  if (hasUsableStoryboardVideoReference(shot, connectedImages)) {
     return null;
   }
 
-  return '当前镜头缺少可确认的后端参考图，请先使用已生成图片或保留可解析的上游图片节点。';
+  return '当前镜头缺少可确认的后端参考图，请先使用已生成图片、连接图片或保留可解析的上游图片节点。';
 }
 
 export function resolveAIStoryboardShotVideoAvailability(
@@ -69,7 +82,7 @@ export function resolveAIStoryboardShotVideoAvailability(
     };
   }
 
-  const unavailableReason = getStoryboardShotVideoUnavailableReason(options.shot);
+  const unavailableReason = getStoryboardShotVideoUnavailableReason(options.shot, options.connectedImages);
   if (unavailableReason) {
     return {
       enabled: false,

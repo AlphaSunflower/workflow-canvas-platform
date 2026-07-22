@@ -46,6 +46,7 @@ export interface StoryboardCommittedGroupLookupOptions {
 export interface ResolveStoryboardReferenceFileIdsOptions {
   shot: StoryboardShotData;
   sourceNode: FileNodeData | null;
+  connectedImages?: Array<{ sourceNode: FileNodeData; order: number }>;
   signal?: AbortSignal;
   maxReferences: number;
   ensureBackendFileId: (
@@ -284,21 +285,45 @@ export async function resolveStoryboardExecutionReferenceFileIds(
     && (persistedSourceFileId.length === 0 || persistedSourceImageFileId !== persistedSourceFileId)
   );
 
+  // Priority 1: AI-generated image (always first)
   if (persistedImageFileId.length > 0) {
     referenceFileIds.add(persistedImageFileId);
   }
 
-  if (options.sourceNode && options.sourceNode.type === 'image') {
-    const sourceBackendFileId = await options.ensureBackendFileId(options.sourceNode, {
-      signal: options.signal,
-      workflowId: options.workflowId,
-    });
-    const normalizedSourceBackendFileId = normalizeFileId(sourceBackendFileId);
-    if (normalizedSourceBackendFileId.length > 0) {
-      referenceFileIds.add(normalizedSourceBackendFileId);
+  // Priority 2: Connected images from per-shot input port
+  if (options.connectedImages && options.connectedImages.length > 0) {
+    const sortedConnected = [...options.connectedImages].sort((a, b) => a.order - b.order);
+    for (const connected of sortedConnected) {
+      if (referenceFileIds.size >= options.maxReferences) {
+        break;
+      }
+      if (connected.sourceNode.type === 'image') {
+        const connectedBackendFileId = await options.ensureBackendFileId(connected.sourceNode, {
+          signal: options.signal,
+          workflowId: options.workflowId,
+        });
+        const normalizedConnectedFileId = normalizeFileId(connectedBackendFileId);
+        if (normalizedConnectedFileId.length > 0) {
+          referenceFileIds.add(normalizedConnectedFileId);
+        }
+      }
     }
-  } else if (hasConfirmedFallbackSourceImageFileId) {
-    referenceFileIds.add(persistedSourceImageFileId);
+  }
+
+  // Priority 3: Legacy source node (fallback)
+  if (referenceFileIds.size < options.maxReferences) {
+    if (options.sourceNode && options.sourceNode.type === 'image') {
+      const sourceBackendFileId = await options.ensureBackendFileId(options.sourceNode, {
+        signal: options.signal,
+        workflowId: options.workflowId,
+      });
+      const normalizedSourceBackendFileId = normalizeFileId(sourceBackendFileId);
+      if (normalizedSourceBackendFileId.length > 0) {
+        referenceFileIds.add(normalizedSourceBackendFileId);
+      }
+    } else if (hasConfirmedFallbackSourceImageFileId) {
+      referenceFileIds.add(persistedSourceImageFileId);
+    }
   }
 
   const normalizedReferenceFileIds = Array.from(referenceFileIds).slice(0, options.maxReferences);

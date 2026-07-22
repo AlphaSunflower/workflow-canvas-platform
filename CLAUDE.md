@@ -102,6 +102,33 @@ main/composition → controller → service → repository/shared-contracts
 
 Canvas rendering is thumbnail-first. Upgrades to preview only when display size crosses a threshold, with hysteresis to prevent ping-pong. Original/download resources are reserved for viewer and export paths. Remote protected images require authenticated blob fetches — never mount raw browser `src` when auth is required.
 
+### Storyboard Shot Input Ports
+
+Each storyboard shot has its own input port for connecting reference images for video generation:
+
+- **Port mode**: `dynamic` (one input group per shot)
+- **Handle format**: `{shotId}:images` (e.g., `storyboard-shot-123:images`)
+- **Max connections per shot**: 4 images
+- **Legacy compatibility**: `group-1` is preserved for existing connections
+
+**Reference image priority for video generation:**
+1. `shot.imageFileId` (AI-generated image, always first)
+2. Connected images from per-shot input port
+3. Legacy `sourceNode` (fallback)
+4. Legacy `shot.sourceImageFileId` (fallback)
+
+**Key files:**
+- `frontend/src/nodes/ai-storyboard/groups.ts` — port group definitions and validation
+- `frontend/src/nodes/ai-storyboard/input-resolver.ts` — input image resolution
+- `frontend/src/nodes/ai-storyboard/storyboard-shot-video-runner.ts` — video generation flow
+- `frontend/src/nodes/ai-storyboard/storyboard-execution-service.ts` — reference image resolution
+
+### Video Generation Reference Limits
+
+- Backend: `AI_VIDEO_GEN_MAX_REFERENCE_COUNT = 4`
+- Frontend: `maxReferences = 4`
+- Each group must provide 1-4 referenceFileIds
+
 ### Auth Model
 
 - `AuthProvider` is the single source of truth for session state

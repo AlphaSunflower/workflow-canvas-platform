@@ -120,6 +120,7 @@ export class RetryPolicyService {
     if (
       runtimeStorageErrors.has(message)
       || message.startsWith("WHITE_MODEL_BLOB_NOT_FOUND:")
+      || message.startsWith("REFERENCE_FILE_NOT_FOUND:")
     ) {
       return {
         code: ERROR_CODES.storageError,

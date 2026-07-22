@@ -277,7 +277,7 @@ export class DbFilesRepository implements FilesRepository {
 
       const existingBlob = await this.findBlobBySha256WithExecutor(client, normalized.sha256);
 
-      if (existingBlob) {
+      if (existingBlob && await this.objectStorage.exists(existingBlob.storageKey)) {
         const fileRecord = await this.insertReadyAssetForBlob(client, normalized, existingBlob);
         await this.insertFileEvent(client, {
           fileId: fileRecord.id,
@@ -521,7 +521,14 @@ export class DbFilesRepository implements FilesRepository {
       return this.readBlobVariantContent(blob, variant);
     }
 
-    return this.readStorageContent(blob.storageKey, blob.mimeType, blob.sha256);
+    try {
+      return await this.readStorageContent(blob.storageKey, blob.mimeType, blob.sha256);
+    } catch (error) {
+      if (error instanceof Error && error.message.startsWith("BLOB_FILE_MISSING")) {
+        return null;
+      }
+      throw error;
+    }
   }
 
   async readFileContentStream(
@@ -1382,7 +1389,14 @@ export class DbFilesRepository implements FilesRepository {
       return null;
     }
 
-    return this.readStorageContent(storageKey, mimeType, blob.sha256);
+    try {
+      return await this.readStorageContent(storageKey, mimeType, blob.sha256);
+    } catch (error) {
+      if (error instanceof Error && error.message.startsWith("BLOB_FILE_MISSING")) {
+        return null;
+      }
+      throw error;
+    }
   }
 
   private async readStorageContent(
@@ -1390,16 +1404,23 @@ export class DbFilesRepository implements FilesRepository {
     mimeType: string,
     blobSha256: string,
   ): Promise<FileContentReadResult> {
-    const result = await this.objectStorage.read(storageKey);
+    try {
+      const result = await this.objectStorage.read(storageKey);
 
-    return {
-      buffer: result.buffer,
-      mimeType,
-      byteLength: result.byteLength,
-      storageKey: result.storageKey,
-      blobSha256,
-      lastModifiedAt: result.lastModifiedAt,
-    };
+      return {
+        buffer: result.buffer,
+        mimeType,
+        byteLength: result.byteLength,
+        storageKey: result.storageKey,
+        blobSha256,
+        lastModifiedAt: result.lastModifiedAt,
+      };
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException | undefined)?.code === "ENOENT") {
+        throw new Error(`BLOB_FILE_MISSING: Blob file not found at storage key: ${storageKey}`);
+      }
+      throw error;
+    }
   }
 
   private async readStorageContentStream(
@@ -1407,16 +1428,23 @@ export class DbFilesRepository implements FilesRepository {
     mimeType: string,
     blobSha256: string,
   ): Promise<FileContentStreamResult> {
-    const result = await this.objectStorage.readStream(storageKey);
+    try {
+      const result = await this.objectStorage.readStream(storageKey);
 
-    return {
-      stream: result.stream,
-      mimeType,
-      byteLength: result.byteLength,
-      storageKey: result.storageKey,
-      blobSha256,
-      lastModifiedAt: result.lastModifiedAt,
-    };
+      return {
+        stream: result.stream,
+        mimeType,
+        byteLength: result.byteLength,
+        storageKey: result.storageKey,
+        blobSha256,
+        lastModifiedAt: result.lastModifiedAt,
+      };
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException | undefined)?.code === "ENOENT") {
+        throw new Error(`BLOB_FILE_MISSING: Blob file not found at storage key: ${storageKey}`);
+      }
+      throw error;
+    }
   }
 
   private extensionFromStorageKey(storageKey: string): string | null {

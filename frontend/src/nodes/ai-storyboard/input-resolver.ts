@@ -1,8 +1,8 @@
 import type { WorkflowResolvedNodeGroupState } from '@/contracts/workflow';
 import type { AnyNodeData, FileNodeData } from '@/types';
 import { isAINodeData, isFileNodeData } from '@/utils';
-import { AI_STORYBOARD_INPUT_PORT_ID } from './constants';
-import type { StoryboardResolvedInputImage } from './types';
+import { AI_STORYBOARD_INPUT_PORT_ID, AI_STORYBOARD_LEGACY_GROUP_ID } from './constants';
+import type { StoryboardResolvedInputImage, StoryboardShotConnectedImage } from './types';
 
 function extractPromptHint(node: AnyNodeData | null | undefined): string | undefined {
   if (!node || !isAINodeData(node)) {
@@ -39,6 +39,7 @@ export function resolveStoryboardInputImages(
   },
 ): StoryboardResolvedInputImage[] {
   return resolvedGroups
+    .filter((groupState) => groupState.group.id === AI_STORYBOARD_LEGACY_GROUP_ID)
     .flatMap((groupState) => {
       const inputPort = groupState.ports.find((port) => port.portId === AI_STORYBOARD_INPUT_PORT_ID);
       return inputPort?.inputs ?? [];
@@ -58,5 +59,35 @@ export function resolveStoryboardInputImages(
         promptHint,
         order: index,
       } satisfies StoryboardResolvedInputImage;
+    });
+}
+
+export function resolveStoryboardShotConnectedImages(
+  resolvedGroups: WorkflowResolvedNodeGroupState[],
+  shotId: string,
+): StoryboardShotConnectedImage[] {
+  const shotGroup = resolvedGroups.find((groupState) => groupState.group.id === shotId);
+  if (!shotGroup) {
+    return [];
+  }
+
+  const inputPort = shotGroup.ports.find((port) => port.portId === AI_STORYBOARD_INPUT_PORT_ID);
+  if (!inputPort) {
+    return [];
+  }
+
+  return inputPort.inputs
+    .filter((input) => isFileNodeData(input.sourceNode) && input.sourceNode.type === 'image')
+    .map((input, index) => {
+      const sourceNode = input.sourceNode;
+      const sourceFileId = resolveSourceFileId(sourceNode);
+
+      return {
+        sourceNodeId: sourceNode.id.value,
+        sourceFileId,
+        sourceNode,
+        fileName: sourceNode.fileName,
+        order: index,
+      } satisfies StoryboardShotConnectedImage;
     });
 }

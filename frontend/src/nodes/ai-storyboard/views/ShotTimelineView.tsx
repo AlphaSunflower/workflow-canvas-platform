@@ -6,9 +6,10 @@ import {
   normalizeAIImageGenNodeModel,
 } from '@/nodes/ai-image-gen/constants';
 import { AI_VIDEO_GEN_DURATION_OPTIONS } from '@/nodes/ai-video-gen/constants';
-import { getAIStoryboardShotOutputHandle } from '../groups';
+import { getAIStoryboardInputHandle, getAIStoryboardShotOutputHandle } from '../groups';
 import { resolveAIStoryboardShotImageAvailability } from '../shot-image-execution';
 import { resolveAIStoryboardShotVideoAvailability } from '../shot-video-execution';
+import type { StoryboardShotConnectedImage } from '../types';
 import { StoryboardShotPreview } from './StoryboardShotPreview';
 import { StoryboardStatusBadge } from './StoryboardStatusBadge';
 import {
@@ -26,6 +27,7 @@ import {
 export interface StoryboardShotTimelineViewProps {
   shots: StoryboardShotData[];
   previews: Map<string, StoryboardShotImagePreview>;
+  connectedImagesMap?: Map<string, StoryboardShotConnectedImage[]>;
   nodeColor: string;
   onPatchShot: (shotId: string, patch: Partial<StoryboardShotData>) => void;
   onDeleteShot: (shotId: string) => void;
@@ -71,6 +73,7 @@ function renderSelectField(
 export const ShotTimelineView: React.FC<StoryboardShotTimelineViewProps> = ({
   shots,
   previews,
+  connectedImagesMap,
   nodeColor,
   onPatchShot,
   onDeleteShot,
@@ -99,8 +102,9 @@ export const ShotTimelineView: React.FC<StoryboardShotTimelineViewProps> = ({
     <div className="ai-storyboard-shot-timeline">
       {shots.map((shot) => {
         const preview = previews.get(shot.id);
+        const shotConnectedImages = connectedImagesMap?.get(shot.id) ?? [];
         const imageAvailability = resolveAIStoryboardShotImageAvailability({ shot });
-        const videoAvailability = resolveAIStoryboardShotVideoAvailability({ shot });
+        const videoAvailability = resolveAIStoryboardShotVideoAvailability({ shot, connectedImages: shotConnectedImages });
         const imageStatusText = getStoryboardImageStatusText(shot);
         const videoStatusText = getStoryboardVideoStatusText(shot);
         const imageRatioOptions = getStoryboardImageAspectRatioOptions(shot.imageModel);
@@ -110,6 +114,8 @@ export const ShotTimelineView: React.FC<StoryboardShotTimelineViewProps> = ({
         );
         const isExpanded = expandedShotIds.has(shot.id);
 
+        const connectedCount = shotConnectedImages.length;
+
         return (
           <article
             key={shot.id}
@@ -118,6 +124,18 @@ export const ShotTimelineView: React.FC<StoryboardShotTimelineViewProps> = ({
               isExpanded ? 'ai-storyboard-shot-row--expanded' : '',
             ].filter(Boolean).join(' ')}
           >
+            <Handle
+              id={getAIStoryboardInputHandle(shot.id)}
+              type="target"
+              position={Position.Left}
+              className="react-flow__handle ai-storyboard-shot-row__input-handle nodrag nopan"
+              style={{
+                background: nodeColor,
+                top: '50%',
+                left: -7,
+                transform: 'translateY(-50%)',
+              }}
+            />
             <Handle
               id={getAIStoryboardShotOutputHandle(shot.id)}
               type="source"
@@ -146,6 +164,11 @@ export const ShotTimelineView: React.FC<StoryboardShotTimelineViewProps> = ({
                 )}
               />
               <span className="ai-storyboard-shot-chip">Shot {shot.order}</span>
+              {connectedCount > 0 ? (
+                <span className="ai-storyboard-shot-chip ai-storyboard-shot-chip--connected">
+                  {connectedCount} 图
+                </span>
+              ) : null}
             </div>
 
             <div className="ai-storyboard-shot-row__editor">

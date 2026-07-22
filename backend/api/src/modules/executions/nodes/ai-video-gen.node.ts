@@ -102,7 +102,7 @@ function mapAIVideoGenValidationError(error: string): CreateExecutionErrorMappin
   }
 
   if (error.startsWith("INVALID_REFERENCE_FILE_COUNT:")) {
-    return { code: 40047, message: "每个 group 必须提供 1 到 2 个 referenceFileIds。" };
+    return { code: 40047, message: "每个 group 必须提供 1 到 4 个 referenceFileIds。" };
   }
 
   return null;

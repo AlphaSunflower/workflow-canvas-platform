@@ -210,7 +210,7 @@ export function normalizeAIVideoGenParameters(input: {
 }
 
 export const AI_VIDEO_GEN_MIN_REFERENCE_COUNT = 1 as const;
-export const AI_VIDEO_GEN_MAX_REFERENCE_COUNT = 2 as const;
+export const AI_VIDEO_GEN_MAX_REFERENCE_COUNT = 4 as const;
 export const AI_VIDEO_GEN_DEFAULT_POLL_INTERVAL_MS = 5000 as const;
 export const AI_VIDEO_GEN_DEFAULT_TIMEOUT_MS = 600000 as const;
 // Null means no local provider concurrency limit by default.

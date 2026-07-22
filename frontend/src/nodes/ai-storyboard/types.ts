@@ -56,6 +56,14 @@ export interface StoryboardResolvedInputImage {
   order: number;
 }
 
+export interface StoryboardShotConnectedImage {
+  sourceNodeId: string;
+  sourceFileId: string;
+  sourceNode: FileNodeData;
+  fileName: string;
+  order: number;
+}
+
 const DEFAULT_IMAGE_MODEL: AIImageGenNodeModel = 'gpt-image-2';
 const DEFAULT_IMAGE_ASPECT_RATIO: AIImageGenNodeAspectRatio = 'auto';
 const DEFAULT_IMAGE_SIZE: AIImageGenNodeImageSize = '1K';
