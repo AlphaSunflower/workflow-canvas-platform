@@ -8,6 +8,7 @@ export interface ContextMenuActionHandlers {
   onOpenFileProperties: (nodeId: string) => void;
   onExportFileNode: (nodeId: string, options?: { forceDirectoryPicker?: boolean }) => void;
   onSplitImageNode: (nodeId: string, grid: ImageGridSplitMenuSelection) => void;
+  onGoToStoryboard: () => void;
 }
 
 export type ImageGridSplitMenuSelection =

@@ -68,6 +68,7 @@ function createContextMenuOptions(): BuildContextMenuItemsOptions {
       onOpenFileProperties: () => undefined,
       onExportFileNode: () => undefined,
       onSplitImageNode: () => undefined,
+      onGoToStoryboard: () => undefined,
     },
   };
 }

@@ -16,6 +16,7 @@ import { buildContextMenuItems } from './context-menu/builders';
 import type { ImageGridSplitMenuSelection } from './context-menu/types';
 import { aiNodeDefinitions } from '@/nodes/definitions';
 import type { UseNotificationReturn } from '@/hooks/ui/useNotification';
+import { storyboardLogin } from '@/api/services/storyboard-login-api';
 
 type CreatableNodeType = Exclude<
   AnyNodeData['type'],
@@ -380,6 +381,30 @@ export function useCanvasFileInteractions(
           void actions.exportFileNode(nodeId, exportOptions);
         },
         onSplitImageNode: handleSplitImageNode,
+        onGoToStoryboard: () => {
+          void (async (): Promise<void> => {
+            try {
+              const result = await storyboardLogin();
+              if (!result.success) {
+                notification.showError('跳转失败', result.error?.message ?? '登录校验失败');
+                return;
+              }
+
+              const { accessToken, refreshToken, userId, displayName } = result.data;
+              const targetUrl =
+                'http://localhost:5173/?' +
+                `token=${encodeURIComponent(accessToken)}` +
+                `&refresh=${encodeURIComponent(refreshToken)}` +
+                `&userId=${encodeURIComponent(userId)}` +
+                `&name=${encodeURIComponent(displayName)}`;
+
+              window.open(targetUrl, '_blank');
+            } catch (error) {
+              const message = error instanceof Error ? error.message : '网络错误';
+              notification.showError('跳转失败', message);
+            }
+          })();
+        },
       },
     });
   }, [

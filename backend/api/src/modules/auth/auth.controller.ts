@@ -7,6 +7,7 @@ import {
   readJsonBody,
   sendApiError,
   sendApiSuccess,
+  sendJson,
 } from "@newworkflow/backend-shared";
 import {
   validateLoginRequest,
@@ -71,6 +72,10 @@ function mapAuthError(error: string): {
         errorCode: "INTERNAL_ERROR",
       };
   }
+}
+
+function sendUnauthorized(response: ServerResponse): void {
+  sendApiError(response, 401, 40157, "UNAUTHORIZED", "未登录。");
 }
 
 export class AuthController {
@@ -159,6 +164,37 @@ export class AuthController {
       sendApiSuccess(response, getCurrentUserContext(request)?.user ?? authenticated.user);
     } catch (error) {
       this.handleError(response, error);
+    }
+  }
+
+  async storyboardLogin(
+    request: IncomingMessage,
+    response: ServerResponse,
+  ): Promise<void> {
+    try {
+      const authenticated = await requireAuth(request, response, this.getAuthService());
+
+      if (!authenticated) {
+        return;
+      }
+
+      const authHeader = request.headers.authorization ?? "";
+      const userJwt = authHeader.replace(/^Bearer\s+/i, "");
+
+      if (!userJwt) {
+        sendUnauthorized(response);
+        return;
+      }
+
+      const result = await this.getAuthService().storyboardLogin(authenticated.user.email, userJwt);
+      sendJson(response, 200, { code: 200, data: result });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "UNKNOWN_ERROR";
+      if (message.startsWith("STORYBOARD_")) {
+        sendApiError(response, 502, 50221, message, "分镜系统登录失败，请稍后重试。");
+        return;
+      }
+      sendApiError(response, 500, 50021, "STORYBOARD_FAILED", "分镜系统跳转失败。");
     }
   }
 

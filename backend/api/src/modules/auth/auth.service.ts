@@ -8,6 +8,8 @@ import type {
   RegisterRequest,
 } from "@newworkflow/backend-shared/api";
 import type { IncomingMessage } from "node:http";
+import http from "node:http";
+import https from "node:https";
 import type {
   AccountRepository,
   AccountUserRecord,
@@ -264,6 +266,83 @@ export class AuthService {
 
   getRequestContext(request: IncomingMessage): AuthRequestContext {
     return createRequestContext(request);
+  }
+
+  async storyboardLogin(email: string, userJwt: string): Promise<{
+    accessToken: string;
+    refreshToken: string;
+    userId: string;
+    displayName: string;
+  }> {
+    const user = await this.accountsRepository.findUserByEmail(email);
+
+    if (!user) {
+      throw new Error("STORYBOARD_USER_NOT_FOUND");
+    }
+
+    const storyboardUrl = process.env.STORYBOARD_API_URL ?? "http://localhost:8082";
+    const url = new URL(`${storyboardUrl}/api/auth/unlogin`);
+
+    return new Promise((resolve, reject) => {
+      const transport = url.protocol === "https:" ? https : http;
+
+      const requestBody = JSON.stringify({ account: email, password: user.passwordHash, jwt: userJwt });
+      const req = transport.request(
+        {
+          hostname: url.hostname,
+          port: url.port,
+          path: url.pathname,
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Content-Length": Buffer.byteLength(requestBody),
+          },
+          timeout: 10000,
+        },
+        (res) => {
+          let data = "";
+          res.on("data", (chunk) => { data += chunk; });
+          res.on("end", () => {
+            if (res.statusCode !== 200) {
+              reject(new Error(`STORYBOARD_AUTH_FAILED:${res.statusCode}`));
+              return;
+            }
+            try {
+              const parsed = JSON.parse(data) as {
+                code: number;
+                data?: {
+                  accessToken: string;
+                  refreshToken: string;
+                  userId: string;
+                  displayName: string;
+                };
+              };
+              if (parsed.code !== 200 || !parsed.data) {
+                reject(new Error("STORYBOARD_AUTH_FAILED"));
+                return;
+              }
+              resolve({
+                accessToken: parsed.data.accessToken,
+                refreshToken: parsed.data.refreshToken,
+                userId: parsed.data.userId,
+                displayName: parsed.data.displayName,
+              });
+            } catch {
+              reject(new Error("STORYBOARD_INVALID_RESPONSE"));
+            }
+          });
+        },
+      );
+
+      req.on("timeout", () => {
+        req.destroy();
+        reject(new Error("STORYBOARD_TIMEOUT"));
+      });
+
+      req.on("error", (err) => reject(err));
+      req.write(requestBody);
+      req.end();
+    });
   }
 
   private async ensureInitialized(): Promise<void> {

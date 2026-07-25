@@ -123,6 +123,12 @@ export function registerModuleRoutes(
     },
     {
       method: "POST",
+      pattern: "/api/v1/auth/storyboard-login",
+      handler: ({ request, response }) =>
+        controllers.authController.storyboardLogin(request, response),
+    },
+    {
+      method: "POST",
       pattern: "/api/v1/ai/prompt-optimize",
       handler: ({ request, response }) =>
         controllers.promptOptimizeController.optimizePrompt(request, response),

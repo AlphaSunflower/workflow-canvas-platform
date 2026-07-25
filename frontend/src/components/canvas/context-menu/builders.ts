@@ -32,6 +32,7 @@ function buildCanvasMenuItems(
   const {
     onImportFiles,
     onCreateNode,
+    onGoToStoryboard,
   } = handlers;
 
   const items: ContextMenuItem[] = [
@@ -56,6 +57,16 @@ function buildCanvasMenuItems(
         onClick: () => onCreateNode(definition.type, position),
       });
     });
+
+  items.push(
+    { id: 'divider-2', divider: true, label: '' },
+    {
+      id: 'go-to-storyboard',
+      label: 'AI\u5206\u955c\u7f51\u9875\u7248',
+      icon: '\u{1F3AC}',
+      onClick: onGoToStoryboard,
+    },
+  );
 
   return items;
 }
