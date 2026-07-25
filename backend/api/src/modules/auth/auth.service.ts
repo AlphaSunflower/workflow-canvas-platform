@@ -274,19 +274,13 @@ export class AuthService {
     userId: string;
     displayName: string;
   }> {
-    const user = await this.accountsRepository.findUserByEmail(email);
-
-    if (!user) {
-      throw new Error("STORYBOARD_USER_NOT_FOUND");
-    }
-
     const storyboardUrl = process.env.STORYBOARD_API_URL ?? "http://localhost:8082";
     const url = new URL(`${storyboardUrl}/api/auth/unlogin`);
 
     return new Promise((resolve, reject) => {
       const transport = url.protocol === "https:" ? https : http;
 
-      const requestBody = JSON.stringify({ account: email, password: user.passwordHash, jwt: userJwt });
+      const requestBody = JSON.stringify({ account: email, jwt: userJwt });
       const req = transport.request(
         {
           hostname: url.hostname,
