@@ -3,7 +3,7 @@
 ## Config
 
 - Confirm `backend/config/backend.config.json` contains `providers.laozhang.sora2Official.apiKey`.
-- Confirm `providers.laozhang.sora2Official.apiBaseUrl` is `https://api.laozhang.ai/v1` unless testing another compatible gateway.
+- Confirm `providers.laozhang.sora2Official.apiBaseUrl` is `https://api2.laozhang.ai/v1` unless testing another compatible gateway.
 - Confirm example config and tests do not contain a real API key.
 
 ## AI Image Gen

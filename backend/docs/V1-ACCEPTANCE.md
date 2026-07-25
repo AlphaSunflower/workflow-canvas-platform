@@ -41,7 +41,7 @@ BACKEND_WORKER_PORT=3200
 BACKEND_WORKER_POLL_INTERVAL_MS=5000
 BACKEND_PROVIDER_SNAPSHOT_DIR=data/provider-snapshots
 LAOZHANG_API_KEY=你的真实老张 API Key
-LAOZHANG_API_URL=https://api.laozhang.ai/v1beta/models/gemini-3-pro-image-preview:generateContent
+LAOZHANG_API_URL=https://api2.laozhang.ai/v1beta/models/gemini-3-pro-image-preview:generateContent
 ```
 
 说明：

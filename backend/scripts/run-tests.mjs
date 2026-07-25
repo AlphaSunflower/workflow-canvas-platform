@@ -460,6 +460,6 @@ function mirrorRuntimeDependencies(compiledRoot) {
 
     const targetNodeModules = path.join(compiledRoot, entryName, 'node_modules');
     mkdirSync(path.dirname(targetNodeModules), { recursive: true });
-    cpSync(sourceNodeModules, targetNodeModules, { recursive: true, force: true });
+    cpSync(sourceNodeModules, targetNodeModules, { recursive: true, force: true, dereference: true });
   }
 }

@@ -40,7 +40,7 @@ Environment variables may still override matching config values when supported b
 - `providers.laozhang.apiUrl`: Laozhang Gemini image endpoint URL. The current Gemini image generation path continues to use this full endpoint.
 - `providers.laozhang.openaiApiBaseUrl`: Laozhang OpenAI-compatible image API base URL. `gpt-image-2-vip` will use this base URL instead of the Gemini full endpoint.
 - `providers.laozhang.sora2Official.apiKey`: Laozhang Sora2Official group API key for `GPT Image 2 Official`.
-- `providers.laozhang.sora2Official.apiBaseUrl`: Laozhang Sora2Official OpenAI-compatible base URL. Default is `https://api.laozhang.ai/v1`.
+- `providers.laozhang.sora2Official.apiBaseUrl`: Laozhang Sora2Official OpenAI-compatible base URL. Default is `https://api2.laozhang.ai/v1`.
 - `providers.laozhang.vision.apiUrl`: Laozhang vision API URL.
 - `providers.laozhang.vision.model`: Laozhang vision model.
 - `providers.laozhang.vision.timeoutMs`: Laozhang vision request timeout in milliseconds. Default is `180000` for multimodal prompt optimize and storyboard arrange requests.
@@ -60,7 +60,7 @@ The backend now keeps two separate Laozhang image addresses:
 - `providers.laozhang.apiUrl`
   Used by the existing Gemini image generation route. This is a full endpoint such as `.../v1beta/models/gemini-3-pro-image-preview:generateContent`.
 - `providers.laozhang.openaiApiBaseUrl`
-  Used by the OpenAI-compatible image route for `gpt-image-2-vip`. This should be a base URL such as `https://api.laozhang.ai/v1`.
+  Used by the OpenAI-compatible image route for `gpt-image-2-vip`. This should be a base URL such as `https://api2.laozhang.ai/v1`.
 - `providers.laozhang.sora2Official.apiBaseUrl`
   Used by the Sora2Official group route for `gpt-image-2-official`; the worker sends the official provider model `gpt-image-2` through this base URL.
 
@@ -79,7 +79,7 @@ Do not replace the Gemini endpoint with either OpenAI-compatible base URL. They 
 
 `laozhang-veo` is used by video generation tasks. By default, no local Worker concurrency limit is configured, so the Worker may dispatch all created video tasks that have available queue capacity. This matches the provider deployment where the backend maps to multiple client-side access lanes.
 
-The Veo worker route uses the Laozhang Veo 3.1 official-forward Videos API. Keep `providers.laozhang.veo.apiBaseUrl` as an OpenAI-style base URL such as `https://api.laozhang.ai/v1`; the worker creates tasks with `POST /v1/videos` multipart form data, polls `GET /v1/videos/{id}`, and downloads MP4 bytes from `GET /v1/videos/{id}/content`.
+The Veo worker route uses the Laozhang Veo 3.1 official-forward Videos API. Keep `providers.laozhang.veo.apiBaseUrl` as an OpenAI-style base URL such as `https://api2.laozhang.ai/v1`; the worker creates tasks with `POST /v1/videos` multipart form data, polls `GET /v1/videos/{id}`, and downloads MP4 bytes from `GET /v1/videos/{id}/content`.
 
 Supported Veo models are:
 

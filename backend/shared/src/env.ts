@@ -585,15 +585,15 @@ export function createEnv(serviceName: ServiceName): ServiceEnv {
     laozhangApiUrl: pickString(
       process.env.LAOZHANG_API_URL,
       config.providers?.laozhang?.apiUrl,
-    ) ?? "https://api.laozhang.ai/v1beta/models/gemini-3-pro-image-preview:generateContent",
+    ) ?? "https://api2.laozhang.ai/v1beta/models/gemini-3-pro-image-preview:generateContent",
     laozhangOpenaiApiBaseUrl: pickString(
       process.env.LAOZHANG_OPENAI_API_BASE_URL,
       config.providers?.laozhang?.openaiApiBaseUrl,
-    ) ?? "https://api.laozhang.ai/v1",
+    ) ?? "https://api2.laozhang.ai/v1",
     laozhangSora2OfficialApiBaseUrl: pickString(
       process.env.LAOZHANG_SORA2OFFICIAL_BASE_URL,
       config.providers?.laozhang?.sora2Official?.apiBaseUrl,
-    ) ?? "https://api.laozhang.ai/v1",
+    ) ?? "https://api2.laozhang.ai/v1",
     laozhangSora2OfficialApiKey: normalizeProviderApiKey(pickString(
       process.env.LAOZHANG_SORA2OFFICIAL_API_KEY,
       config.providers?.laozhang?.sora2Official?.apiKey,
@@ -601,7 +601,7 @@ export function createEnv(serviceName: ServiceName): ServiceEnv {
     laozhangVisionApiUrl: pickString(
       process.env.LAOZHANG_VISION_API_URL,
       config.providers?.laozhang?.vision?.apiUrl,
-    ) ?? "https://api.laozhang.ai/v1/chat/completions",
+    ) ?? "https://api2.laozhang.ai/v1/chat/completions",
     laozhangVisionModel: pickString(
       process.env.LAOZHANG_VISION_MODEL,
       config.providers?.laozhang?.vision?.model,
@@ -616,7 +616,7 @@ export function createEnv(serviceName: ServiceName): ServiceEnv {
     laozhangVeoApiBaseUrl: pickString(
       process.env.LAOZHANG_VEO_API_BASE_URL,
       config.providers?.laozhang?.veo?.apiBaseUrl,
-    ) ?? "https://api.laozhang.ai/v1",
+    ) ?? "https://api2.laozhang.ai/v1",
     laozhangVeoMaxConcurrency: normalizeOptionalPositiveInteger(
       pickNumber(
         process.env.LAOZHANG_VEO_MAX_CONCURRENCY,

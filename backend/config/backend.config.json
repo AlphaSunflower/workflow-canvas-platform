@@ -50,19 +50,19 @@
   "providers": {
     "laozhang": {
       "apiKey": "sk-bQfq7Zzf9OZ5XkdPCf3254E2D3D64673Be76D08f2830EbCd",
-      "apiUrl": "https://api.laozhang.ai/v1beta/models/gemini-3-pro-image-preview:generateContent",
-      "openaiApiBaseUrl": "https://api.laozhang.ai/v1",
+      "apiUrl": "https://api2.laozhang.ai/v1beta/models/gemini-3-pro-image-preview:generateContent",
+      "openaiApiBaseUrl": "https://api2.laozhang.ai/v1",
       "sora2Official": {
         "apiKey": "sk-8YBdUaxEHTF1sNAHC50fE6A472Ab4111BeEc018fB3294dAc",
-        "apiBaseUrl": "https://api.laozhang.ai/v1"
+        "apiBaseUrl": "https://api2.laozhang.ai/v1"
       },
       "vision": {
-        "apiUrl": "https://api.laozhang.ai/v1/chat/completions",
+        "apiUrl": "https://api2.laozhang.ai/v1/chat/completions",
         "model": "gemini-3-flash-preview",
         "timeoutMs": 180000
       },
       "veo": {
-        "apiBaseUrl": "https://api.laozhang.ai/v1",
+        "apiBaseUrl": "https://api2.laozhang.ai/v1",
         "pollIntervalMs": 5000,
         "timeoutMs": 600000
       }

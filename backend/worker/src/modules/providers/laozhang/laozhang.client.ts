@@ -83,7 +83,7 @@ export class LaozhangClient {
     this.apiUrl = options.apiUrl.trim();
     this.openaiApiBaseUrl = options.openaiApiBaseUrl.trim().replace(/\/+$/, "");
     this.sora2OfficialApiKey = options.sora2OfficialApiKey ?? null;
-    this.sora2OfficialApiBaseUrl = (options.sora2OfficialApiBaseUrl ?? "https://api.laozhang.ai/v1")
+    this.sora2OfficialApiBaseUrl = (options.sora2OfficialApiBaseUrl ?? "https://api2.laozhang.ai/v1")
       .trim()
       .replace(/\/+$/, "");
 

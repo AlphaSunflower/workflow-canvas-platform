@@ -445,7 +445,7 @@ import base64
 
 # Configuration
 API_KEY = "sk-YOUR_API_KEY"  # Replace with your API Key
-API_URL = "https://api.laozhang.ai/v1beta/models/gemini-3-pro-image-preview:generateContent"
+API_URL = "https://api2.laozhang.ai/v1beta/models/gemini-3-pro-image-preview:generateContent"
 
 # Request headers
 headers = {

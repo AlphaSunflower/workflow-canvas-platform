@@ -215,7 +215,7 @@ export const AI_VIDEO_GEN_DEFAULT_POLL_INTERVAL_MS = 5000 as const;
 export const AI_VIDEO_GEN_DEFAULT_TIMEOUT_MS = 600000 as const;
 // Null means no local provider concurrency limit by default.
 export const AI_VIDEO_GEN_DEFAULT_MAX_CONCURRENCY = null;
-export const AI_VIDEO_GEN_DEFAULT_BASE_URL = "https://api.laozhang.ai/v1" as const;
+export const AI_VIDEO_GEN_DEFAULT_BASE_URL = "https://api2.laozhang.ai/v1" as const;
 
 export interface AIVideoGenExecutionGroupInput {
   groupId: string;
